@@ -1,0 +1,18 @@
+{
+  "pages": [
+    "pages/home/home",
+    "pages/challenge-create/challenge-create",
+    "pages/challenge-target-select/challenge-target-select",
+    "pages/checkin/checkin",
+    "pages/leaderboard/leaderboard"
+  ],
+  "window": {
+    "navigationBarTitleText": "Sleep Rank",
+    "navigationBarBackgroundColor": "#ffffff",
+    "navigationBarTextStyle": "black",
+    "backgroundTextStyle": "light",
+    "backgroundColor": "#f7f9fc"
+  },
+  "style": "v2",
+  "sitemapLocation": "sitemap.json"
+}

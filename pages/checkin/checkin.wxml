@@ -1,0 +1,59 @@
+<view class="screen">
+  <view class="screen-glow"></view>
+  <view class="content">
+    <view class="page-title">我的记录</view>
+
+    <view class="card today-card">
+      <view class="title">{{currentUserName}} 的记录</view>
+      <view class="line">状态：{{todayStatusText}}</view>
+      <view class="line">入睡时间：{{todaySleepStartText}}</view>
+      <view class="line">挑战打卡分：{{todayDailyScore}}</view>
+      <view class="line">睡眠分：{{todaySleepScore}}</view>
+      <view class="line">时长：{{todayDurationMinutes}} 分钟</view>
+      <view class="line">wake_count：{{todayWakeCount}}</view>
+    </view>
+
+    <view class="card challenge-card">
+      <view class="title">挑战记录</view>
+      <view class="line">挑战：{{challengeName}}</view>
+      <view class="line">挑战进度：{{checkedDays}} / {{targetDays}}</view>
+      <view class="line">本次挑战得分：{{currentChallengeScore}}</view>
+      <view class="line">总积分：{{totalScore}}</view>
+      <view class="line">未完成挑战：{{missedChallenges}} 次</view>
+      <view class="line-tip">说明：挑战结束时未达标计 1 次</view>
+      <view class="line">睡眠状态：{{isSleeping ? '进行中' : '未开始'}}</view>
+      <view class="line">开始时间：{{sleepStartTimeText}}</view>
+      <view class="line">会话 wake_count：{{wakeCount}}</view>
+      <view class="line" wx:if="{{latestRecord}}">
+        最近记录：睡眠分 {{latestRecord.sleepScore}}（{{latestRecord.durationMinutes}} 分钟）
+      </view>
+
+      <view class="history-wrap">
+        <view class="history-toggle" bindtap="toggleHistory">
+          <text class="history-title">本次挑战打卡历史</text>
+          <text class="history-arrow">{{historyExpanded ? '收起' : '展开'}}</text>
+        </view>
+
+        <view class="history-body" wx:if="{{historyExpanded}}">
+          <view class="history-empty" wx:if="{{checkInHistory.length === 0}}">
+            暂无打卡历史
+          </view>
+        <view
+          class="card history-card {{item.toneClass}}"
+          wx:for="{{checkInHistory}}"
+          wx:key="id"
+        >
+            <view class="history-head">
+              <text class="history-day">第 {{item.index}} 次</text>
+              <text class="history-date">{{item.dateKey}}</text>
+            </view>
+            <view class="line">挑战打卡分：{{item.dailyScore}}</view>
+            <view class="line">睡眠分：{{item.sleepScore}}</view>
+            <view class="line">时长：{{item.durationMinutes}} 分钟</view>
+            <view class="line">wake_count：{{item.wakeCount}}</view>
+          </view>
+        </view>
+      </view>
+    </view>
+  </view>
+</view>

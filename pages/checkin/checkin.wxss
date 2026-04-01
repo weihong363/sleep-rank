@@ -1,0 +1,161 @@
+page {
+  background: #252847;
+}
+
+.screen {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  padding: 88rpx 30rpx calc(40rpx + env(safe-area-inset-bottom));
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 62% 49%, rgba(255, 159, 96, 0.22), rgba(255, 159, 96, 0) 18%),
+    radial-gradient(circle at 50% 51%, rgba(255, 218, 194, 0.08), rgba(255, 218, 194, 0) 20%),
+    linear-gradient(180deg, #775a63 0%, #6e5560 28%, #544b67 52%, #2e2f50 78%, #252847 100%);
+}
+
+.screen-glow {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 172, 116, 0.14), rgba(255, 172, 116, 0) 34%);
+  pointer-events: none;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+}
+
+.page-title {
+  text-align: center;
+  margin-bottom: 22rpx;
+  font-size: 48rpx;
+  line-height: 1;
+  letter-spacing: -1rpx;
+  color: rgba(255, 236, 224, 0.92);
+  text-transform: lowercase;
+}
+
+.card {
+  border-radius: 26rpx;
+  padding: 28rpx;
+  background: linear-gradient(180deg, rgba(61, 58, 92, 0.78), rgba(44, 45, 77, 0.9));
+  border: 1rpx solid rgba(255, 194, 154, 0.32);
+  box-shadow:
+    0 18rpx 40rpx rgba(12, 14, 34, 0.34),
+    inset 0 1rpx 1rpx rgba(255, 255, 255, 0.06);
+}
+
+.today-card,
+.challenge-card {
+  margin-bottom: 18rpx;
+}
+
+.today-card {
+  background: linear-gradient(135deg, rgba(255, 186, 203, 0.58), rgba(255, 204, 176, 0.56));
+  border-color: rgba(255, 228, 214, 0.52);
+}
+
+.challenge-card {
+  background: linear-gradient(135deg, rgba(159, 189, 255, 0.52), rgba(168, 232, 255, 0.5));
+  border-color: rgba(213, 236, 255, 0.5);
+}
+
+.title {
+  font-size: 34rpx;
+  color: #2e3248;
+  font-weight: 600;
+  margin-bottom: 12rpx;
+}
+
+.line {
+  margin: 12rpx 0;
+  font-size: 27rpx;
+  color: rgba(49, 57, 83, 0.9);
+}
+
+.line-tip {
+  margin: 4rpx 0 12rpx;
+  font-size: 22rpx;
+  color: rgba(73, 83, 118, 0.74);
+}
+
+.history-wrap {
+  margin-top: 16rpx;
+  border-top: 1rpx solid rgba(255, 194, 154, 0.2);
+  padding-top: 14rpx;
+}
+
+.history-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.history-title {
+  margin: 0;
+  font-size: 29rpx;
+  color: rgba(42, 49, 74, 0.95);
+  font-weight: 600;
+}
+
+.history-arrow {
+  font-size: 24rpx;
+  color: rgba(59, 70, 102, 0.8);
+}
+
+.history-body {
+  margin-top: 14rpx;
+}
+
+.history-card {
+  margin-bottom: 14rpx;
+  padding: 22rpx;
+}
+
+.history-tone-0 {
+  background: linear-gradient(135deg, rgba(255, 208, 153, 0.5), rgba(255, 185, 171, 0.48));
+  border-color: rgba(255, 228, 196, 0.5);
+}
+
+.history-tone-1 {
+  background: linear-gradient(135deg, rgba(203, 182, 255, 0.5), rgba(180, 200, 255, 0.48));
+  border-color: rgba(220, 211, 255, 0.5);
+}
+
+.history-tone-2 {
+  background: linear-gradient(135deg, rgba(165, 235, 227, 0.5), rgba(186, 242, 206, 0.48));
+  border-color: rgba(202, 247, 229, 0.5);
+}
+
+.history-tone-3 {
+  background: linear-gradient(135deg, rgba(255, 184, 184, 0.5), rgba(255, 224, 164, 0.48));
+  border-color: rgba(255, 227, 191, 0.5);
+}
+
+.history-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8rpx;
+}
+
+.history-day {
+  font-size: 28rpx;
+  color: #2f3550;
+  font-weight: 600;
+}
+
+.history-date {
+  font-size: 24rpx;
+  color: rgba(60, 69, 97, 0.82);
+}
+
+.history-empty {
+  border-radius: 22rpx;
+  padding: 24rpx;
+  margin-bottom: 14rpx;
+  color: rgba(54, 63, 92, 0.82);
+  background: rgba(239, 245, 255, 0.68);
+  border: 1rpx solid rgba(202, 220, 245, 0.4);
+}

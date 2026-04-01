@@ -1,0 +1,118 @@
+.screen {
+  position: relative;
+  width: 100vw;
+  min-height: 100vh;
+  padding: 88rpx 30rpx 40rpx;
+  box-sizing: border-box;
+  background:
+    radial-gradient(circle at 62% 49%, rgba(255, 159, 96, 0.22), rgba(255, 159, 96, 0) 18%),
+    radial-gradient(circle at 50% 51%, rgba(255, 218, 194, 0.08), rgba(255, 218, 194, 0) 20%),
+    linear-gradient(180deg, #775a63 0%, #6e5560 28%, #544b67 52%, #2e2f50 78%, #252847 100%);
+}
+
+.screen-glow {
+  position: absolute;
+  inset: -20%;
+  background: radial-gradient(circle at 50% 40%, rgba(255, 172, 116, 0.14), rgba(255, 172, 116, 0) 34%);
+  pointer-events: none;
+}
+
+.content {
+  position: relative;
+  z-index: 1;
+}
+
+.page-title {
+  text-align: center;
+  margin-bottom: 18rpx;
+  font-size: 42rpx;
+  color: rgba(255, 236, 224, 0.94);
+}
+
+.tab-wrap {
+  display: flex;
+  gap: 14rpx;
+  margin-bottom: 14rpx;
+}
+
+.tab {
+  flex: 1;
+  text-align: center;
+  padding: 14rpx 0;
+  border-radius: 9999rpx;
+  color: rgba(255, 233, 217, 0.86);
+  background: rgba(45, 50, 82, 0.66);
+}
+
+.tab.active {
+  color: #201318;
+  background: rgba(255, 205, 172, 0.95);
+}
+
+.card {
+  border-radius: 24rpx;
+  padding: 20rpx 24rpx;
+  background: rgba(47, 50, 84, 0.78);
+  border: 1rpx solid rgba(255, 194, 154, 0.28);
+}
+
+.item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 18rpx 0;
+  border-bottom: 1rpx solid rgba(255, 194, 154, 0.15);
+  color: rgba(255, 235, 222, 0.92);
+}
+
+.item:last-child {
+  border-bottom: none;
+}
+
+.group-info {
+  display: flex;
+  flex-direction: column;
+  gap: 6rpx;
+}
+
+.group-name {
+  color: rgba(255, 239, 228, 0.96);
+}
+
+.group-members {
+  font-size: 22rpx;
+  color: rgba(255, 216, 188, 0.74);
+}
+
+.tag {
+  padding: 6rpx 16rpx;
+  border-radius: 9999rpx;
+  font-size: 22rpx;
+  color: rgba(255, 233, 217, 0.82);
+  border: 1rpx solid rgba(255, 194, 154, 0.32);
+}
+
+.tag.checked {
+  color: #2b1a20;
+  background: rgba(255, 207, 176, 0.94);
+  border-color: rgba(255, 233, 217, 0.82);
+}
+
+.footer {
+  margin-top: 16rpx;
+}
+
+.count {
+  display: block;
+  margin-bottom: 10rpx;
+  color: rgba(255, 225, 202, 0.85);
+}
+
+.confirm-btn {
+  color: #0e0b12;
+  border: none;
+  border-radius: 9999rpx;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(180deg, rgba(173, 135, 132, 0.95), rgba(142, 108, 109, 0.98));
+}

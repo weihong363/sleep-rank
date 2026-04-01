@@ -1,0 +1,18 @@
+<view class="screen">
+  <view class="screen-glow"></view>
+  <view class="content">
+    <view class="page-title">leaderboard</view>
+    <view class="card">
+      <view class="title">挑战：{{challengeName}}</view>
+      <view
+        class="rank-row"
+        wx:for="{{rankList}}"
+        wx:key="rank"
+      >
+        <text class="rank-no">#{{item.rank}}</text>
+        <text class="rank-name">{{item.nickname}}</text>
+        <text class="rank-score">{{item.totalScore}} 分</text>
+      </view>
+    </view>
+  </view>
+</view>

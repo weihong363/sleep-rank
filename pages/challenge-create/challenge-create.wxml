@@ -1,0 +1,124 @@
+<view class="screen">
+  <view class="screen-glow"></view>
+  <view class="content">
+    <view class="page-title">challenge hub</view>
+
+    <view class="card user-card">
+      <view class="field-label">当前身份（本地模拟）</view>
+      <picker
+        mode="selector"
+        range="{{users}}"
+        range-key="name"
+        value="{{userIndex}}"
+        bindchange="onSwitchUser"
+      >
+        <view class="picker-value">{{users[userIndex].name}}</view>
+      </picker>
+    </view>
+
+    <view class="card invite-card" wx:if="{{pendingInviteSummary}}">
+      <view class="title">收到挑战邀请</view>
+      <view class="line">挑战：{{pendingInviteSummary.name}}</view>
+      <view class="line">天数：{{pendingInviteSummary.targetDays}} 天</view>
+      <view class="line">睡眠时间：{{pendingInviteSummary.sleepWindowText}}</view>
+      <button class="create-btn" bindtap="onAcceptInvite">接受挑战</button>
+    </view>
+
+    <view class="card" wx:if="{{showCreateCard}}">
+      <view class="title">创建睡眠挑战</view>
+
+      <view class="field">
+        <view class="field-label">挑战名称</view>
+        <input
+          class="input"
+          placeholder="例如：早睡早起挑战"
+          placeholder-class="placeholder"
+          value="{{challengeName}}"
+          bindinput="onNameInput"
+        />
+      </view>
+
+      <view class="field">
+        <view class="field-label">挑战天数</view>
+        <picker
+          mode="selector"
+          range="{{dayOptions}}"
+          value="{{dayOptionIndex}}"
+          bindchange="onDayChange"
+        >
+          <view class="picker-value">{{dayOptions[dayOptionIndex]}} 天</view>
+        </picker>
+      </view>
+
+      <view class="field">
+        <view class="field-label">睡眠时间窗口</view>
+        <view class="window-row">
+          <picker
+            mode="selector"
+            range="{{timeOptions}}"
+            value="{{sleepStartIndex}}"
+            bindchange="onSleepStartChange"
+          >
+            <view class="picker-value small">{{timeOptions[sleepStartIndex]}}</view>
+          </picker>
+          <text class="window-sep">至</text>
+          <picker
+            mode="selector"
+            range="{{timeOptions}}"
+            value="{{sleepEndIndex}}"
+            bindchange="onSleepEndChange"
+          >
+            <view class="picker-value small">{{timeOptions[sleepEndIndex]}}</view>
+          </picker>
+        </view>
+      </view>
+
+      <view class="field">
+        <view class="field-label">参与人</view>
+        <view class="participant-preview">
+          <text>{{participantPreviewText}}</text>
+        </view>
+        <button class="sub-btn" bindtap="goSelectTargets">选择用户或群组</button>
+      </view>
+    </view>
+
+    <button
+      wx:if="{{showCreateCard}}"
+      class="create-btn"
+      bindtap="onCreateTap"
+    >
+      创建挑战
+    </button>
+
+    <view class="card active-card" wx:if="{{!showCreateCard && activeSummary}}">
+      <view class="title">正在挑战</view>
+      <view class="line">挑战名称：{{activeSummary.name}}</view>
+      <view class="line">挑战天数：{{activeSummary.targetDays}} 天</view>
+      <view class="line">睡眠时间：{{activeSummary.sleepWindowText}}</view>
+      <view class="line">挑战状态：{{activeSummary.statusText}}</view>
+      <view class="line" wx:if="{{activeSummary.startDateText !== '--'}}">
+        开始时间：{{activeSummary.startDateText}}
+      </view>
+
+      <view class="participant-title">参与人</view>
+      <view
+        class="participant-row"
+        wx:for="{{activeSummary.participants}}"
+        wx:key="userId"
+      >
+        <text>{{item.name}}</text>
+        <view class="accept-tag {{item.accepted ? 'ok' : 'pending'}}">
+          <text>{{item.acceptText}}</text>
+        </view>
+      </view>
+
+      <button
+        wx:if="{{canCancel}}"
+        class="cancel-btn"
+        bindtap="onCancelChallenge"
+      >
+        取消挑战
+      </button>
+    </view>
+  </view>
+</view>

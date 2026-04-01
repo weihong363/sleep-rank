@@ -1,0 +1,30 @@
+<view class="screen {{isGlowing ? 'is-glowing' : ''}}">
+  <view class="invite-banner" wx:if="{{hasPendingInvite}}" bindtap="onGoAcceptInvite">
+    收到挑战邀请，点击接受
+  </view>
+
+  <view
+    class="button-wrap {{isSleeping ? 'is-sleeping' : ''}}"
+    bindtap="handleTap"
+  >
+    <view class="button-halo"></view>
+
+    <view
+      wx:for="{{ripples}}"
+      wx:key="id"
+      class="ripple"
+      style="width: {{item.size}}px; height: {{item.size}}px; left: {{item.left}}px; top: {{item.top}}px;"
+    ></view>
+
+    <view class="label">
+      <text>{{labelTop}}</text>
+      <text>{{labelBottom}}</text>
+    </view>
+  </view>
+
+  <view class="entry-bar">
+    <view class="entry-chip" bindtap="goCreateChallenge">创建挑战</view>
+    <view class="entry-chip" bindtap="goCheckIn">我的记录</view>
+    <!-- <view class="entry-chip" bindtap="goLeaderboard">排行榜</view> -->
+  </view>
+</view>
