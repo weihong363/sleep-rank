@@ -4,16 +4,19 @@ const leaderboardEngine = require('../../engines/leaderboard-engine');
 Page({
   data: {
     challengeName: '--',
-    rankList: []
+    challengeRankList: [],
+    totalRankList: []
   },
 
   onShow() {
     const challenge = challengeEngine.getActiveChallenge();
-    const rankList = leaderboardEngine.buildLeaderboard(challenge);
+    const challengeRankList = leaderboardEngine.buildChallengeLeaderboard(challenge);
+    const totalRankList = leaderboardEngine.buildUserTotalLeaderboard(challenge);
 
     this.setData({
       challengeName: challenge ? challenge.name : '尚未创建挑战',
-      rankList
+      challengeRankList,
+      totalRankList
     });
   }
 });

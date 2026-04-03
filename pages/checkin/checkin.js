@@ -2,6 +2,31 @@ const challengeEngine = require('../../engines/challenge-engine');
 const sleepEngine = require('../../engines/sleep-engine');
 const userEngine = require('../../engines/user-engine');
 
+const JUDGE_STATUS_TEXT_MAP = {
+  PASS: '达标',
+  FAIL: '未达标'
+};
+
+const FAIL_TYPE_TEXT_MAP = {
+  FAIL_TIMEOUT: '超时未按时入睡',
+  FAIL_MISS: '当天漏打卡',
+  FAIL_EARLY_ACTIVE: '打卡后过早活跃',
+  FAIL_INTERRUPT: '醒来次数过多',
+  FAIL_EARLY_WAKE: '睡眠时长不足',
+  FAIL_LONG_WAKE: '单次清醒过长'
+};
+
+function toJudgeStatusText(status) {
+  return JUDGE_STATUS_TEXT_MAP[status] || '--';
+}
+
+function toFailTypeText(failType) {
+  if (!failType) {
+    return '--';
+  }
+  return FAIL_TYPE_TEXT_MAP[failType] || failType;
+}
+
 Page({
   data: {
     hasChallenge: false,
@@ -22,6 +47,9 @@ Page({
     todayWakeCount: '--',
     todayStatusText: '未开始',
     todaySleepStartText: '--',
+    todayJudgeStatus: '--',
+    todayFailType: '--',
+    todayJudgeMessage: '--',
     currentUserName: '--',
     checkInHistory: [],
     historyExpanded: false
@@ -52,10 +80,15 @@ Page({
         sleepScore: item.sleepRecord.sleepScore,
         durationMinutes: item.sleepRecord.durationMinutes,
         wakeCount: item.sleepRecord.wakeCount,
+        judgeStatus: toJudgeStatusText(item.dailyJudgeResult.status),
+        failType: toFailTypeText(item.dailyJudgeResult.failType),
         toneClass: `history-tone-${index % 4}`
       }));
     const userTotalScore = userCheckIns.reduce((sum, item) => sum + item.dailyScore, 0);
     const userStats = challengeEngine.getUserStats(currentUserId);
+    const todayJudgeResult = challengeEngine.getTodayChallengeResult(challenge, {
+      hasActiveSleepSession: Boolean(sleepSession && sleepSession.isSleeping)
+    });
 
     let todayStatusText = '未开始';
     if (todayCheckIn) {
@@ -91,6 +124,13 @@ Page({
       todayWakeCount: todayCheckIn ? todayCheckIn.sleepRecord.wakeCount : '--',
       todayStatusText,
       todaySleepStartText: sleepStartTimeText,
+      todayJudgeStatus: todayJudgeResult
+        ? toJudgeStatusText(todayJudgeResult.status)
+        : '--',
+      todayFailType: todayJudgeResult
+        ? toFailTypeText(todayJudgeResult.failType)
+        : '--',
+      todayJudgeMessage: todayJudgeResult ? todayJudgeResult.message : '--',
       checkInHistory: history
     });
   },

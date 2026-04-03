@@ -47,9 +47,9 @@
           <text class="group-name">{{item.name}}</text>
           <text class="group-members">成员 {{item.memberIds.length}} 人</text>
         </view>
-        <text class="tag {{item.checked ? 'checked' : ''}}">
-          {{item.checked ? '已选' : '选择'}}
-        </text>
+        <view class="tag {{item.checked ? 'checked' : ''}}">
+          <text>{{item.checked ? '已选' : '选择'}}</text>
+        </view>
       </view>
     </view>
 

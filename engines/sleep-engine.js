@@ -28,6 +28,8 @@ function startSleep() {
     sleepStartTime: now,
     wakeCount: 0,
     lastHideTime: null,
+    currentWakeStartTime: null,
+    wakeEvents: [],
     isSleeping: true,
     updatedAt: now
   };
@@ -40,8 +42,24 @@ function onAppHide() {
   if (!session || !session.isSleeping) {
     return;
   }
-  session.lastHideTime = Date.now();
-  session.updatedAt = Date.now();
+  const now = Date.now();
+  if (session.currentWakeStartTime) {
+    const durationMinutes = Math.max(
+      1,
+      Math.round((now - session.currentWakeStartTime) / 60000)
+    );
+    const currentWake = session.wakeEvents.find(
+      (item) => item.wakeStartTime === session.currentWakeStartTime && !item.wakeEndTime
+    );
+    if (currentWake) {
+      currentWake.wakeEndTime = now;
+      currentWake.durationMinutes = durationMinutes;
+    }
+    session.currentWakeStartTime = null;
+  }
+
+  session.lastHideTime = now;
+  session.updatedAt = now;
   storage.set(`${keys.ACTIVE_SLEEP_SESSION}_${session.userId}`, session);
 }
 
@@ -52,9 +70,16 @@ function onAppShow() {
   }
   // 只有从后台回来才计一次 wake_count，避免首次启动误计数
   if (session.lastHideTime) {
+    const now = Date.now();
     session.wakeCount += 1;
+    session.currentWakeStartTime = now;
+    session.wakeEvents.push({
+      wakeStartTime: now,
+      wakeEndTime: null,
+      durationMinutes: null
+    });
     session.lastHideTime = null;
-    session.updatedAt = Date.now();
+    session.updatedAt = now;
     storage.set(`${keys.ACTIVE_SLEEP_SESSION}_${session.userId}`, session);
   }
 }
@@ -66,6 +91,20 @@ function endSleep() {
   }
 
   const sleepEndTime = Date.now();
+  if (session.currentWakeStartTime) {
+    const durationMinutes = Math.max(
+      1,
+      Math.round((sleepEndTime - session.currentWakeStartTime) / 60000)
+    );
+    const currentWake = session.wakeEvents.find(
+      (item) => item.wakeStartTime === session.currentWakeStartTime && !item.wakeEndTime
+    );
+    if (currentWake) {
+      currentWake.wakeEndTime = sleepEndTime;
+      currentWake.durationMinutes = durationMinutes;
+    }
+    session.currentWakeStartTime = null;
+  }
   const durationMinutes = Math.max(
     1,
     Math.round((sleepEndTime - session.sleepStartTime) / 60000)
@@ -80,6 +119,7 @@ function endSleep() {
     sleepEndTime,
     durationMinutes,
     wakeCount: session.wakeCount,
+    wakeEvents: session.wakeEvents,
     sleepScore,
     createdAt: sleepEndTime
   };

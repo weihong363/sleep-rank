@@ -6,6 +6,9 @@
     <view class="card today-card">
       <view class="title">{{currentUserName}} 的记录</view>
       <view class="line">状态：{{todayStatusText}}</view>
+      <view class="line">规则判定：{{todayJudgeStatus}}</view>
+      <view class="line">失败类型：{{todayFailType}}</view>
+      <view class="line-tip">{{todayJudgeMessage}}</view>
       <view class="line">入睡时间：{{todaySleepStartText}}</view>
       <view class="line">挑战打卡分：{{todayDailyScore}}</view>
       <view class="line">睡眠分：{{todaySleepScore}}</view>
@@ -48,6 +51,8 @@
               <text class="history-date">{{item.dateKey}}</text>
             </view>
             <view class="line">挑战打卡分：{{item.dailyScore}}</view>
+            <view class="line">规则判定：{{item.judgeStatus}}</view>
+            <view class="line">失败类型：{{item.failType}}</view>
             <view class="line">睡眠分：{{item.sleepScore}}</view>
             <view class="line">时长：{{item.durationMinutes}} 分钟</view>
             <view class="line">wake_count：{{item.wakeCount}}</view>

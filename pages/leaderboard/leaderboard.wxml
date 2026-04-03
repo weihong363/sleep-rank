@@ -3,14 +3,36 @@
   <view class="content">
     <view class="page-title">leaderboard</view>
     <view class="card">
-      <view class="title">挑战：{{challengeName}}</view>
+      <view class="title">挑战内排行榜 · {{challengeName}}</view>
       <view
         class="rank-row"
-        wx:for="{{rankList}}"
+        wx:for="{{challengeRankList}}"
         wx:key="rank"
       >
         <text class="rank-no">#{{item.rank}}</text>
-        <text class="rank-name">{{item.nickname}}</text>
+        <view class="rank-main">
+          <text class="rank-name">{{item.nickname}}</text>
+          <text class="rank-meta">连胜 {{item.streak}} 天 · 成功率 {{item.successRate}}%</text>
+        </view>
+        <text class="rank-score">{{item.totalScore}} 分</text>
+      </view>
+      <view class="empty" wx:if="{{!challengeRankList.length}}">
+        当前还没有可展示的挑战内数据
+      </view>
+    </view>
+
+    <view class="card secondary-card">
+      <view class="title">用户总榜（含当前挑战实时分）</view>
+      <view
+        class="rank-row"
+        wx:for="{{totalRankList}}"
+        wx:key="rank"
+      >
+        <text class="rank-no">#{{item.rank}}</text>
+        <view class="rank-main">
+          <text class="rank-name">{{item.nickname}}</text>
+          <text class="rank-meta">连胜 {{item.streak}} 天 · 挑战成功率 {{item.successRate}}%</text>
+        </view>
         <text class="rank-score">{{item.totalScore}} 分</text>
       </view>
     </view>

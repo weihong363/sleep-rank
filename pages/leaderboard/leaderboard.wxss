@@ -39,11 +39,16 @@ page {
 .card {
   border-radius: 26rpx;
   padding: 28rpx;
+  margin-bottom: 20rpx;
   background: linear-gradient(180deg, rgba(61, 58, 92, 0.72), rgba(44, 45, 77, 0.88));
   border: 1rpx solid rgba(255, 194, 154, 0.28);
   box-shadow:
     0 18rpx 40rpx rgba(12, 14, 34, 0.34),
     inset 0 1rpx 1rpx rgba(255, 255, 255, 0.06);
+}
+
+.secondary-card {
+  margin-bottom: 0;
 }
 
 .title {
@@ -71,11 +76,29 @@ page {
 }
 
 .rank-name {
+  display: block;
   flex: 1;
   color: rgba(255, 237, 225, 0.9);
+}
+
+.rank-main {
+  flex: 1;
+}
+
+.rank-meta {
+  display: block;
+  margin-top: 4rpx;
+  color: rgba(255, 228, 202, 0.7);
+  font-size: 22rpx;
 }
 
 .rank-score {
   color: #ffcc9e;
   font-weight: 600;
+}
+
+.empty {
+  color: rgba(255, 227, 202, 0.72);
+  font-size: 24rpx;
+  padding-top: 4rpx;
 }

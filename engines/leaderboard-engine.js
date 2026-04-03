@@ -1,40 +1,119 @@
+const challengeEngine = require('./challenge-engine');
 const userEngine = require('./user-engine');
 
-/**
- * Leaderboard Engine
- * - MVP 阶段提供“本地简易排行榜”能力
- * - 目前使用本地挑战数据 + 固定示例玩家生成榜单
- */
-function buildLeaderboard(activeChallenge) {
-  const currentUser = userEngine.getCurrentUser();
-  const myCheckIns = activeChallenge
-    ? activeChallenge.checkIns.filter((item) => item.userId === currentUser.id)
+function toDateStart(dateKey) {
+  const [year, month, day] = dateKey.split('-').map((n) => Number(n));
+  return new Date(year, month - 1, day).getTime();
+}
+
+function calculateSuccessRate(passDays, judgedDays) {
+  if (!judgedDays) {
+    return 0;
+  }
+  return Math.round((passDays / judgedDays) * 100);
+}
+
+function calculatePassStreak(dailyResults) {
+  if (!Array.isArray(dailyResults) || dailyResults.length === 0) {
+    return 0;
+  }
+  const sorted = [...dailyResults]
+    .sort((a, b) => toDateStart(a.dateKey) - toDateStart(b.dateKey));
+  let streak = 0;
+  let expectedDate = null;
+  for (let i = sorted.length - 1; i >= 0; i -= 1) {
+    const item = sorted[i];
+    const dayStart = toDateStart(item.dateKey);
+    if (item.status !== 'PASS') {
+      break;
+    }
+    if (expectedDate !== null && dayStart !== expectedDate) {
+      break;
+    }
+    streak += 1;
+    expectedDate = dayStart - 24 * 60 * 60 * 1000;
+  }
+  return streak;
+}
+
+function getChallengeUserStat(activeChallenge, userId) {
+  const checkIns = activeChallenge
+    ? activeChallenge.checkIns.filter((item) => item.userId === userId)
     : [];
-  const checkedDays = myCheckIns.length;
-  const totalScore = myCheckIns.reduce((sum, item) => sum + item.dailyScore, 0);
-
-  const seeds = [
-    { nickname: '夜跑阿泽', totalScore: 560, checkedDays: 7 },
-    { nickname: '晨光Mia', totalScore: 520, checkedDays: 7 },
-    { nickname: '晚睡克星', totalScore: 498, checkedDays: 6 }
-  ];
-
-  const me = {
-    nickname: `${currentUser.name}(我)`,
+  const dailyResults = activeChallenge && Array.isArray(activeChallenge.dailyResults)
+    ? activeChallenge.dailyResults.filter((item) => item.userId === userId)
+    : [];
+  const totalScore = checkIns.reduce((sum, item) => sum + item.dailyScore, 0);
+  const passDays = dailyResults.filter((item) => item.status === 'PASS').length;
+  const judgedDays = dailyResults.length;
+  return {
     totalScore,
-    checkedDays
+    checkedDays: checkIns.length,
+    passDays,
+    judgedDays,
+    successRate: calculateSuccessRate(passDays, judgedDays),
+    streak: calculatePassStreak(dailyResults)
   };
+}
 
-  const merged = [me, ...seeds]
-    .sort((a, b) => (b.totalScore - a.totalScore) || (b.checkedDays - a.checkedDays))
-    .map((item, index) => ({
-      rank: index + 1,
-      ...item
-    }));
+function toRankList(rows) {
+  return rows
+    .sort((a, b) => (b.totalScore - a.totalScore) || (b.successRate - a.successRate) || (b.streak - a.streak))
+    .map((item, index) => ({ rank: index + 1, ...item }));
+}
 
-  return merged;
+/**
+ * 挑战内排行榜：只基于当前挑战真实数据，不混入 seed。
+ */
+function buildChallengeLeaderboard(activeChallenge) {
+  if (!activeChallenge || !Array.isArray(activeChallenge.participants)) {
+    return [];
+  }
+  const currentUserId = userEngine.getCurrentUserId();
+  const rows = activeChallenge.participants
+    .filter((participant) => participant.accepted)
+    .map((participant) => {
+      const stat = getChallengeUserStat(activeChallenge, participant.userId);
+      return {
+        userId: participant.userId,
+        nickname: participant.userId === currentUserId ? `${participant.name}(我)` : participant.name,
+        totalScore: stat.totalScore,
+        checkedDays: stat.checkedDays,
+        successRate: stat.successRate,
+        streak: stat.streak
+      };
+    });
+  return toRankList(rows);
+}
+
+/**
+ * 用户总榜：用累计 UserStats + 当前挑战实时分。
+ */
+function buildUserTotalLeaderboard(activeChallenge) {
+  const users = userEngine.getUsers();
+  const currentUserId = userEngine.getCurrentUserId();
+  const rows = users.map((user) => {
+    const userStats = challengeEngine.getUserStats(user.id);
+    const challengeStat = getChallengeUserStat(activeChallenge, user.id);
+    const judgedChallenges = userStats.completedChallenges + userStats.missedChallenges;
+    return {
+      userId: user.id,
+      nickname: user.id === currentUserId ? `${user.name}(我)` : user.name,
+      totalScore: userStats.totalScore + challengeStat.totalScore,
+      checkedDays: challengeStat.checkedDays,
+      successRate: calculateSuccessRate(userStats.completedChallenges, judgedChallenges),
+      streak: challengeStat.streak
+    };
+  });
+  return toRankList(rows);
+}
+
+function buildLeaderboard(activeChallenge) {
+  return buildChallengeLeaderboard(activeChallenge);
 }
 
 module.exports = {
-  buildLeaderboard
+  buildLeaderboard,
+  buildChallengeLeaderboard,
+  buildUserTotalLeaderboard
 };

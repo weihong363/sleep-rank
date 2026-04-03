@@ -2,6 +2,7 @@ const storage = require('../store/storage');
 const keys = require('../store/keys');
 const scoreEngine = require('./score-engine');
 const userEngine = require('./user-engine');
+const judgeEngine = require('./judge-engine');
 const { formatDateKey, formatDateTime } = require('../utils/date');
 
 /**
@@ -13,6 +14,7 @@ const { formatDateKey, formatDateTime } = require('../utils/date');
 const CHALLENGE_STATUS = {
   PENDING: 'PENDING',
   ONGOING: 'ONGOING',
+  WAITING_FINAL_ACK: 'WAITING_FINAL_ACK',
   COMPLETED: 'COMPLETED',
   CANCELED: 'CANCELED'
 };
@@ -40,28 +42,93 @@ function isChallengePeriodEnded(challenge, now = Date.now()) {
   return now > endAt;
 }
 
+function getRuleConfig(challenge) {
+  return {
+    ...judgeEngine.DEFAULT_RULE_CONFIG,
+    ...(challenge && challenge.ruleConfig ? challenge.ruleConfig : {})
+  };
+}
+
+function getDailyMissDeadline(challenge, dateKey) {
+  if (!challenge || !challenge.sleepWindow || !challenge.sleepWindow.start) {
+    return null;
+  }
+  const [year, month, day] = dateKey.split('-').map((n) => Number(n));
+  const [hours, minutes] = challenge.sleepWindow.start.split(':').map((n) => Number(n));
+  const ruleConfig = getRuleConfig(challenge);
+  const target = new Date(year, month - 1, day, hours, minutes, 0, 0).getTime();
+  return target + ruleConfig.graceMinutes * 60000;
+}
+
+function getDailyResult(challenge, userId, dateKey) {
+  if (!challenge || !challenge.dailyResults) {
+    return null;
+  }
+  return challenge.dailyResults.find(
+    (item) => item.userId === userId && item.dateKey === dateKey
+  ) || null;
+}
+
+function upsertDailyResult(challenge, dailyResult) {
+  if (!challenge.dailyResults) {
+    challenge.dailyResults = [];
+  }
+  const index = challenge.dailyResults.findIndex(
+    (item) => item.userId === dailyResult.userId && item.dateKey === dailyResult.dateKey
+  );
+  if (index >= 0) {
+    challenge.dailyResults[index] = dailyResult;
+  } else {
+    challenge.dailyResults.push(dailyResult);
+  }
+}
+
+function hasAllAcceptedParticipantsAckedEnd(challenge) {
+  if (!challenge) {
+    return false;
+  }
+  const acceptedUserIds = challenge.participants
+    .filter((p) => p.accepted)
+    .map((p) => p.userId);
+  if (acceptedUserIds.length === 0) {
+    return false;
+  }
+  const ackSet = new Set(challenge.finalAckUserIds || []);
+  return acceptedUserIds.every((userId) => ackSet.has(userId));
+}
+
 function getActiveChallenge() {
   const challenge = storage.get(keys.ACTIVE_CHALLENGE, null);
   if (!challenge) {
     return null;
   }
-  if (challenge.status !== CHALLENGE_STATUS.ONGOING) {
+  if (challenge.status === CHALLENGE_STATUS.ONGOING && isChallengePeriodEnded(challenge)) {
+    challenge.status = CHALLENGE_STATUS.WAITING_FINAL_ACK;
+    challenge.updatedAt = Date.now();
+    if (!challenge.finalAckUserIds) {
+      challenge.finalAckUserIds = [];
+    }
+    saveChallenge(challenge);
+  }
+
+  if (challenge.status === CHALLENGE_STATUS.WAITING_FINAL_ACK && hasAllAcceptedParticipantsAckedEnd(challenge)) {
+    challenge.status = CHALLENGE_STATUS.COMPLETED;
+    challenge.completedAt = Date.now();
+    challenge.updatedAt = Date.now();
+    challenge.completedReason = 'PERIOD_ENDED_ACKED';
+    settleCompletedChallengeStats(challenge);
+    saveChallenge(challenge);
+  }
+
+  if (
+    challenge.status !== CHALLENGE_STATUS.ONGOING &&
+    challenge.status !== CHALLENGE_STATUS.WAITING_FINAL_ACK
+  ) {
     if (challenge.status === CHALLENGE_STATUS.COMPLETED) {
       settleCompletedChallengeStats(challenge);
       saveChallenge(challenge);
     }
     return challenge;
-  }
-
-  if (hasAllParticipantsCompleted(challenge) || isChallengePeriodEnded(challenge)) {
-    challenge.status = CHALLENGE_STATUS.COMPLETED;
-    challenge.completedAt = Date.now();
-    challenge.updatedAt = Date.now();
-    challenge.completedReason = hasAllParticipantsCompleted(challenge)
-      ? 'ALL_PARTICIPANTS_DONE'
-      : 'PERIOD_ENDED';
-    settleCompletedChallengeStats(challenge);
-    saveChallenge(challenge);
   }
 
   return challenge;
@@ -209,8 +276,62 @@ function canCurrentUserSleep(challenge = getActiveChallenge()) {
   if (!challenge || challenge.status !== CHALLENGE_STATUS.ONGOING) {
     return false;
   }
+  if (isChallengePeriodEnded(challenge)) {
+    return false;
+  }
   const participant = getCurrentParticipant(challenge);
   return Boolean(participant && participant.accepted);
+}
+
+function acknowledgeChallengeEndByCurrentUser() {
+  const challenge = getActiveChallenge();
+  if (!challenge) {
+    return { ok: false, reason: 'NO_CHALLENGE' };
+  }
+  if (!isChallengePeriodEnded(challenge)) {
+    return { ok: false, reason: 'PERIOD_NOT_ENDED' };
+  }
+  if (
+    challenge.status !== CHALLENGE_STATUS.ONGOING &&
+    challenge.status !== CHALLENGE_STATUS.WAITING_FINAL_ACK
+  ) {
+    return {
+      ok: true,
+      state: challenge.status === CHALLENGE_STATUS.COMPLETED ? 'COMPLETED' : 'NOT_ACTIVE'
+    };
+  }
+
+  const participant = getCurrentParticipant(challenge);
+  if (!participant || !participant.accepted) {
+    return { ok: false, reason: 'NOT_PARTICIPANT' };
+  }
+
+  if (!challenge.finalAckUserIds) {
+    challenge.finalAckUserIds = [];
+  }
+  if (!challenge.finalAckUserIds.includes(participant.userId)) {
+    challenge.finalAckUserIds.push(participant.userId);
+  }
+
+  if (hasAllAcceptedParticipantsAckedEnd(challenge)) {
+    challenge.status = CHALLENGE_STATUS.COMPLETED;
+    challenge.completedAt = Date.now();
+    challenge.updatedAt = Date.now();
+    challenge.completedReason = 'PERIOD_ENDED_ACKED';
+    settleCompletedChallengeStats(challenge);
+    saveChallenge(challenge);
+    return { ok: true, state: 'COMPLETED' };
+  }
+
+  challenge.status = CHALLENGE_STATUS.WAITING_FINAL_ACK;
+  challenge.updatedAt = Date.now();
+  saveChallenge(challenge);
+
+  const remaining = challenge.participants
+    .filter((p) => p.accepted)
+    .filter((p) => !(challenge.finalAckUserIds || []).includes(p.userId))
+    .length;
+  return { ok: true, state: 'WAITING', remaining };
 }
 
 function getProgress(challenge) {
@@ -225,8 +346,11 @@ function getProgress(challenge) {
 
   const checkedDays = challenge.checkIns.length;
   const targetDays = challenge.targetDays;
+  const currentUserId = userEngine.getCurrentUserId();
   const todayKey = formatDateKey();
-  const todayChecked = challenge.checkIns.some((item) => item.dateKey === todayKey);
+  const todayChecked = challenge.checkIns.some(
+    (item) => item.dateKey === todayKey && item.userId === currentUserId
+  );
   const progressPercent = targetDays > 0
     ? Math.min(Math.round((checkedDays / targetDays) * 100), 100)
     : 0;
@@ -332,6 +456,9 @@ function addTodayCheckIn(sleepRecord) {
   if (!challenge || challenge.status !== CHALLENGE_STATUS.ONGOING) {
     return { ok: false, reason: 'NO_ACTIVE_CHALLENGE' };
   }
+  if (isChallengePeriodEnded(challenge)) {
+    return { ok: false, reason: 'PERIOD_ENDED' };
+  }
   if (!sleepRecord) {
     return { ok: false, reason: 'NO_SLEEP_RECORD' };
   }
@@ -342,6 +469,11 @@ function addTodayCheckIn(sleepRecord) {
   const now = Date.now();
   const currentUserId = userEngine.getCurrentUserId();
   const dateKey = formatDateKey(now);
+  const existingDailyResult = getDailyResult(challenge, currentUserId, dateKey);
+  if (existingDailyResult && existingDailyResult.failType === judgeEngine.FAIL_TYPE.FAIL_MISS) {
+    return { ok: false, reason: 'FAIL_MISS_LOCKED' };
+  }
+
   const currentUserCheckInCount = challenge.checkIns.filter(
     (item) => item.userId === currentUserId
   ).length;
@@ -349,19 +481,33 @@ function addTodayCheckIn(sleepRecord) {
     (item) => item.dateKey === dateKey && item.userId === currentUserId
   );
   const checkInIndex = existingIndex >= 0 ? currentUserCheckInCount : currentUserCheckInCount + 1;
-  const dailyScore = scoreEngine.calculateDailyChallengeScore(
-    sleepRecord.sleepScore,
-    checkInIndex
-  );
+  const dailyJudgeResult = judgeEngine.evaluateSleepChallengeResult({
+    challenge,
+    sleepRecord,
+    dateKey
+  });
+  const dailyScore = dailyJudgeResult.status === judgeEngine.DAILY_RESULT_STATUS.PASS
+    ? scoreEngine.calculateDailyChallengeScore(
+      sleepRecord.sleepScore,
+      checkInIndex
+    )
+    : 0;
 
   const checkIn = {
     id: `checkin_${now}`,
     userId: currentUserId,
     dateKey,
     sleepRecord,
+    dailyJudgeResult,
     dailyScore,
     createdAt: now
   };
+  upsertDailyResult(challenge, {
+    userId: currentUserId,
+    dateKey,
+    ...dailyJudgeResult,
+    createdAt: now
+  });
 
   if (existingIndex >= 0) {
     challenge.checkIns[existingIndex] = checkIn;
@@ -371,13 +517,6 @@ function addTodayCheckIn(sleepRecord) {
 
   challenge.totalScore = challenge.checkIns.reduce((sum, item) => sum + item.dailyScore, 0);
   challenge.updatedAt = now;
-
-  if (hasAllParticipantsCompleted(challenge)) {
-    challenge.status = CHALLENGE_STATUS.COMPLETED;
-    challenge.completedAt = now;
-    challenge.completedReason = 'ALL_PARTICIPANTS_DONE';
-    settleCompletedChallengeStats(challenge);
-  }
 
   saveChallenge(challenge);
   return { ok: true, challenge, checkIn };
@@ -394,6 +533,43 @@ function getTodayCheckIn(challenge = getActiveChallenge()) {
   ) || null;
 }
 
+function getTodayChallengeResult(challenge = getActiveChallenge(), options = {}) {
+  if (!challenge) {
+    return null;
+  }
+  const currentUserId = userEngine.getCurrentUserId();
+  const todayKey = formatDateKey();
+  const existingDailyResult = getDailyResult(challenge, currentUserId, todayKey);
+  if (existingDailyResult) {
+    return existingDailyResult;
+  }
+
+  const todayCheckIn = getTodayCheckIn(challenge);
+  if (todayCheckIn) {
+    return todayCheckIn.dailyJudgeResult;
+  }
+
+  const missDeadline = getDailyMissDeadline(challenge, todayKey);
+  if (!options.hasActiveSleepSession && missDeadline && Date.now() > missDeadline) {
+    const missResult = judgeEngine.evaluateSleepChallengeResult({
+      challenge,
+      sleepRecord: null,
+      dateKey: todayKey
+    });
+    const missDailyResult = {
+      userId: currentUserId,
+      dateKey: todayKey,
+      ...missResult,
+      createdAt: Date.now()
+    };
+    upsertDailyResult(challenge, missDailyResult);
+    challenge.updatedAt = Date.now();
+    saveChallenge(challenge);
+    return missDailyResult;
+  }
+  return null;
+}
+
 function getDisplayChallengeSummary(challenge = getActiveChallenge()) {
   if (!challenge) {
     return null;
@@ -408,6 +584,8 @@ function getDisplayChallengeSummary(challenge = getActiveChallenge()) {
       ? '等待成员接受'
       : challenge.status === CHALLENGE_STATUS.ONGOING
         ? '挑战进行中'
+        : challenge.status === CHALLENGE_STATUS.WAITING_FINAL_ACK
+          ? '挑战周期结束，等待成员确认'
         : challenge.status === CHALLENGE_STATUS.COMPLETED
           ? '挑战已完成'
           : '挑战已取消',
@@ -435,9 +613,11 @@ module.exports = {
   getCurrentParticipant,
   isCurrentUserInAnyLiveChallenge,
   canCurrentUserSleep,
+  acknowledgeChallengeEndByCurrentUser,
   getProgress,
   addTodayCheckIn,
   getTodayCheckIn,
+  getTodayChallengeResult,
   getDisplayChallengeSummary,
   getUserStats
 };
