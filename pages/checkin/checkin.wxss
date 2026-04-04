@@ -108,6 +108,53 @@ page {
   margin-top: 14rpx;
 }
 
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8rpx;
+  margin-top: 12rpx;
+}
+
+.calendar-cell {
+  min-height: 70rpx;
+  border-radius: 14rpx;
+  padding: 8rpx 4rpx;
+  text-align: center;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.calendar-day {
+  font-size: 22rpx;
+  color: #2f3550;
+}
+
+.calendar-status {
+  margin-top: 4rpx;
+  font-size: 18rpx;
+  color: rgba(50, 60, 92, 0.78);
+}
+
+.calendar-empty {
+  background: rgba(255, 255, 255, 0);
+}
+
+.calendar-pending {
+  background: rgba(236, 242, 255, 0.8);
+  border: 1rpx solid rgba(200, 218, 247, 0.65);
+}
+
+.calendar-pass {
+  background: rgba(197, 243, 226, 0.9);
+  border: 1rpx solid rgba(156, 222, 196, 0.72);
+}
+
+.calendar-fail {
+  background: rgba(255, 220, 220, 0.88);
+  border: 1rpx solid rgba(244, 177, 177, 0.72);
+}
+
 .history-card {
   margin-bottom: 14rpx;
   padding: 22rpx;

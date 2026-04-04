@@ -1,5 +1,6 @@
 const sleepEngine = require('../../engines/sleep-engine');
 const challengeEngine = require('../../engines/challenge-engine');
+const userEngine = require('../../engines/user-engine');
 
 const FAIL_TYPE_TEXT_MAP = {
   FAIL_TIMEOUT: '超时未按时入睡',
@@ -17,13 +18,34 @@ Page({
     labelTop: 'sleep',
     labelBottom: 'now',
     ripples: [],
-    hasPendingInvite: false
+    hasPendingInvite: false,
+    pendingInviteChallengeId: '',
+    requireProfileComplete: false,
+    requireCloudProfileSetup: false,
+    cloudProfileSetupText: '',
+    profileNickName: '',
+    profileAvatarUrl: ''
   },
 
   glowTimer: null,
   rippleTimer: null,
+  inviteProcessing: false,
 
-  getGreetingLabel() {
+  onLoad(options = {}) {
+    const inviteChallengeId = (options && options.inviteChallengeId) || '';
+    if (inviteChallengeId) {
+      this.setData({ pendingInviteChallengeId: inviteChallengeId });
+    }
+  },
+
+  getSleepActionLabel(challenge) {
+    const canSleepInChallenge = challengeEngine.canCurrentUserSleep(challenge);
+    if (!canSleepInChallenge) {
+      return {
+        labelTop: 'sleep',
+        labelBottom: 'now'
+      };
+    }
     const hour = new Date().getHours();
     const isNight = hour >= 18 || hour < 5;
     return {
@@ -32,21 +54,125 @@ Page({
     };
   },
 
-  onShow() {
-    // 页面恢复时与实际睡眠状态同步，避免文案与会话状态不一致
+  refreshPageState() {
     const active = sleepEngine.getActiveSession();
-    const isSleeping = Boolean(active && active.isSleeping);
+    const challenge = challengeEngine.getActiveChallenge();
     const pendingInvite = challengeEngine.getPendingInvitationForCurrentUser();
-    const greeting = this.getGreetingLabel();
+    const actionLabel = this.getSleepActionLabel(challenge);
+    const currentUser = userEngine.getCurrentUser();
+    const cloudProfileSetup = userEngine.shouldPromptCloudProfileSetup(currentUser);
+    const cloudProfileSetupText = cloudProfileSetup.missingNickname && cloudProfileSetup.missingAvatar
+      ? '昵称和头像未设置，点击前往个人资料完善'
+      : cloudProfileSetup.missingNickname
+        ? '昵称未设置，点击前往个人资料完善'
+        : cloudProfileSetup.missingAvatar
+          ? '头像未设置，点击前往个人资料完善'
+          : '';
     this.setData({
-      isSleeping,
-      labelTop: greeting.labelTop,
-      labelBottom: greeting.labelBottom,
-      hasPendingInvite: Boolean(pendingInvite)
+      isSleeping: Boolean(active && active.isSleeping),
+      hasPendingInvite: Boolean(pendingInvite),
+      labelTop: actionLabel.labelTop,
+      labelBottom: actionLabel.labelBottom,
+      requireProfileComplete: !userEngine.isProfileCompleted(currentUser),
+      requireCloudProfileSetup: cloudProfileSetup.shouldPrompt,
+      cloudProfileSetupText,
+      profileNickName: currentUser.nickName || '',
+      profileAvatarUrl: currentUser.avatarUrl || ''
     });
   },
 
+  onShow() {
+    userEngine.bootstrapCloudUser()
+      .catch(() => null)
+      .finally(() => {
+        challengeEngine.refreshFromCloudForCurrentUser()
+          .finally(() => {
+            this.refreshPageState();
+            this.processPendingInviteEntry();
+          });
+      });
+  },
+
+  processPendingInviteEntry() {
+    const inviteChallengeId = this.data.pendingInviteChallengeId;
+    if (!inviteChallengeId || this.inviteProcessing) {
+      return;
+    }
+    if (this.data.requireProfileComplete) {
+      return;
+    }
+    this.inviteProcessing = true;
+    challengeEngine.joinChallengeByShareInvite(inviteChallengeId).then((res) => {
+      this.inviteProcessing = false;
+      if (!res.ok) {
+        const reasonTextMap = {
+          ALREADY_IN_CHALLENGE: '你已在其他挑战中',
+          CHALLENGE_NOT_FOUND: '邀请挑战不存在',
+          CHALLENGE_NOT_PENDING: '该挑战已开始或已结束',
+          LOAD_CHALLENGE_FAILED: '邀请加载失败，请稍后重试'
+        };
+        wx.showToast({
+          title: reasonTextMap[res.reason] || '加入挑战失败',
+          icon: 'none'
+        });
+        this.setData({ pendingInviteChallengeId: '' });
+        return;
+      }
+      this.setData({ pendingInviteChallengeId: '' });
+      challengeEngine.refreshFromCloudForCurrentUser().finally(() => {
+        this.refreshPageState();
+        wx.navigateTo({
+          url: `/pages/challenge-create/challenge-create?fromInvite=1&inviteChallengeId=${inviteChallengeId}`
+        });
+      });
+    });
+  },
+
+  onProfileNickInput(e) {
+    this.setData({
+      profileNickName: e.detail.value || ''
+    });
+  },
+
+  onChooseProfileAvatar(e) {
+    this.setData({
+      profileAvatarUrl: (e && e.detail && e.detail.avatarUrl) || ''
+    });
+  },
+
+  onSaveProfileFromHome() {
+    const result = userEngine.saveProfile({
+      nickName: this.data.profileNickName,
+      avatarUrl: this.data.profileAvatarUrl
+    });
+    if (!result.ok) {
+      const msg = result.reason === 'INVALID_NICKNAME' ? '请输入有效昵称' : '请先选择头像';
+      wx.showToast({
+        title: msg,
+        icon: 'none'
+      });
+      return;
+    }
+    challengeEngine.refreshFromCloudForCurrentUser()
+      .finally(() => {
+        this.refreshPageState();
+        this.processPendingInviteEntry();
+        wx.showToast({
+          title: '资料已保存',
+          icon: 'success'
+        });
+      });
+  },
+
   handleTap(e) {
+    if (this.data.requireProfileComplete) {
+      wx.showToast({
+        title: '请先完善个人资料',
+        icon: 'none'
+      });
+      return;
+    }
+
     const { x = 0, y = 0 } = e.detail || {};
     const size = 320;
     const left = x - size / 2;
@@ -79,12 +205,12 @@ Page({
       const message = !me
         ? '请先创建或接受挑战'
         : challenge.status === challengeEngine.CHALLENGE_STATUS.COMPLETED
-        ? '当前挑战已完成'
-        : challenge.status === challengeEngine.CHALLENGE_STATUS.WAITING_FINAL_ACK
-        ? '挑战周期已结束，请点击确认完成'
-        : challenge.status === challengeEngine.CHALLENGE_STATUS.PENDING
-        ? (me && me.accepted ? '请等待挑战开始' : '请先接受挑战邀请')
-        : '挑战尚未开始';
+          ? '当前挑战已完成'
+          : challenge.status === challengeEngine.CHALLENGE_STATUS.WAITING_FINAL_ACK
+            ? '挑战周期已结束，请点击确认完成'
+            : challenge.status === challengeEngine.CHALLENGE_STATUS.PENDING
+              ? (me && me.accepted ? '请等待挑战开始' : '请先接受挑战邀请')
+              : '挑战尚未开始';
       wx.showToast({
         title: message,
         icon: 'none'
@@ -132,13 +258,13 @@ Page({
       }
     }
 
-    const greeting = this.getGreetingLabel();
+    const actionLabel = this.getSleepActionLabel(challengeEngine.getActiveChallenge());
     this.setData({
       ripples: [...this.data.ripples, { id: rippleId, size, left, top }],
       isGlowing: true,
       isSleeping: nextSleeping,
-      labelTop: greeting.labelTop,
-      labelBottom: greeting.labelBottom
+      labelTop: actionLabel.labelTop,
+      labelBottom: actionLabel.labelBottom
     });
 
     clearTimeout(this.glowTimer);
@@ -166,15 +292,21 @@ Page({
     });
   },
 
+  goProfile() {
+    wx.navigateTo({
+      url: '/pages/profile/profile'
+    });
+  },
+
   onGoAcceptInvite() {
     wx.navigateTo({
       url: '/pages/challenge-create/challenge-create'
     });
   },
 
-  goLeaderboard() {
+  onGoCloudProfileSetup() {
     wx.navigateTo({
-      url: '/pages/leaderboard/leaderboard'
+      url: '/pages/profile/profile'
     });
   },
 

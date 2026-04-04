@@ -1,5 +1,4 @@
 const challengeEngine = require('../../engines/challenge-engine');
-const userEngine = require('../../engines/user-engine');
 const storage = require('../../store/storage');
 const keys = require('../../store/keys');
 
@@ -24,23 +23,26 @@ Page({
     showCreateCard: true,
     canCancel: false,
     pendingInviteSummary: null,
-    users: [{ id: '--', name: '--' }],
-    userIndex: 0
+    fromInviteEntry: false,
+    inviteChallengeId: ''
+  },
+
+  onLoad(options = {}) {
+    this.setData({
+      fromInviteEntry: String(options.fromInvite || '') === '1',
+      inviteChallengeId: options.inviteChallengeId || ''
+    });
   },
 
   onShow() {
-    this.syncCurrentUser();
-    this.loadDraftSelection();
-    this.refreshChallengeState();
-  },
-
-  syncCurrentUser() {
-    const users = userEngine.getUsers();
-    const currentUserId = userEngine.getCurrentUserId();
-    const userIndex = Math.max(users.findIndex((u) => u.id === currentUserId), 0);
-    this.setData({
-      users,
-      userIndex
+    if (typeof wx !== 'undefined' && wx.showShareMenu) {
+      wx.showShareMenu({
+        menus: ['shareAppMessage', 'shareTimeline']
+      });
+    }
+    challengeEngine.refreshFromCloudForCurrentUser().finally(() => {
+      this.loadDraftSelection();
+      this.refreshChallengeState();
     });
   },
 
@@ -87,17 +89,6 @@ Page({
     });
   },
 
-  onSwitchUser(e) {
-    const nextIndex = Number(e.detail.value);
-    const user = this.data.users[nextIndex];
-    if (!user) {
-      return;
-    }
-    userEngine.setCurrentUserId(user.id);
-    this.setData({ userIndex: nextIndex });
-    this.refreshChallengeState();
-  },
-
   onNameInput(e) {
     this.setData({
       challengeName: e.detail.value
@@ -122,12 +113,6 @@ Page({
     });
   },
 
-  goSelectTargets() {
-    wx.navigateTo({
-      url: '/pages/challenge-target-select/challenge-target-select'
-    });
-  },
-
   onCreateTap() {
     const name = (this.data.challengeName || '').trim() || '我的睡眠挑战';
     const targetDays = this.data.dayOptions[this.data.dayOptionIndex];
@@ -139,7 +124,7 @@ Page({
       targetDays,
       sleepWindowStart,
       sleepWindowEnd,
-      participants: this.data.selectedParticipants
+      participants: []
     });
 
     if (!result.ok) {
@@ -156,7 +141,7 @@ Page({
     storage.remove(keys.CHALLENGE_DRAFT_PARTICIPANTS);
     this.refreshChallengeState();
     wx.showToast({
-      title: '挑战已发起，等待成员接受',
+      title: '挑战已发起，等待成员确认',
       icon: 'none'
     });
   },
@@ -195,5 +180,57 @@ Page({
       icon: 'none'
     });
     this.refreshChallengeState();
+  },
+
+  onLaterDealInvite() {
+    wx.reLaunch({
+      url: '/pages/home/home'
+    });
+  },
+
+  getCurrentShareChallenge() {
+    if (this.data.activeSummary && this.data.activeSummary.id) {
+      return this.data.activeSummary;
+    }
+    if (this.data.pendingInviteSummary && this.data.pendingInviteSummary.id) {
+      return this.data.pendingInviteSummary;
+    }
+    return null;
+  },
+
+  getSharePayload() {
+    const summary = this.getCurrentShareChallenge();
+    if (!summary) {
+      return null;
+    }
+    const title = `${summary.name}｜邀请你加入睡眠挑战`;
+    const path = `/pages/home/home?inviteChallengeId=${summary.id}`;
+    return { title, path };
+  },
+
+  onShareAppMessage() {
+    const payload = this.getSharePayload();
+    if (!payload) {
+      return {
+        title: 'SleepRank 睡眠挑战',
+        path: '/pages/home/home'
+      };
+    }
+    return payload;
+  },
+
+  onShareTimeline() {
+    const payload = this.getSharePayload();
+    if (!payload) {
+      return {
+        title: 'SleepRank 睡眠挑战',
+        query: ''
+      };
+    }
+    const query = payload.path.split('?')[1] || '';
+    return {
+      title: payload.title,
+      query
+    };
   }
 });

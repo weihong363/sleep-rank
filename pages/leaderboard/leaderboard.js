@@ -9,14 +9,16 @@ Page({
   },
 
   onShow() {
-    const challenge = challengeEngine.getActiveChallenge();
-    const challengeRankList = leaderboardEngine.buildChallengeLeaderboard(challenge);
-    const totalRankList = leaderboardEngine.buildUserTotalLeaderboard(challenge);
+    challengeEngine.refreshFromCloudForCurrentUser().finally(() => {
+      const challenge = challengeEngine.getActiveChallenge();
+      const challengeRankList = leaderboardEngine.buildChallengeLeaderboard(challenge);
+      const totalRankList = leaderboardEngine.buildUserTotalLeaderboard(challenge);
 
-    this.setData({
-      challengeName: challenge ? challenge.name : '尚未创建挑战',
-      challengeRankList,
-      totalRankList
+      this.setData({
+        challengeName: challenge ? challenge.name : '尚未创建挑战',
+        challengeRankList,
+        totalRankList
+      });
     });
   }
 });

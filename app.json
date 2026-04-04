@@ -1,6 +1,7 @@
 {
   "pages": [
     "pages/home/home",
+    "pages/profile/profile",
     "pages/challenge-create/challenge-create",
     "pages/challenge-target-select/challenge-target-select",
     "pages/checkin/checkin",

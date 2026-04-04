@@ -1,27 +1,35 @@
 <view class="screen">
   <view class="screen-glow"></view>
   <view class="content">
-    <view class="page-title">challenge hub</view>
-
-    <view class="card user-card">
-      <view class="field-label">当前身份（本地模拟）</view>
-      <picker
-        mode="selector"
-        range="{{users}}"
-        range-key="name"
-        value="{{userIndex}}"
-        bindchange="onSwitchUser"
-      >
-        <view class="picker-value">{{users[userIndex].name}}</view>
-      </picker>
-    </view>
+    <view class="page-title">挑战中心</view>
 
     <view class="card invite-card" wx:if="{{pendingInviteSummary}}">
-      <view class="title">收到挑战邀请</view>
+      <view class="invite-owner">
+        <image
+          class="invite-owner-avatar"
+          src="{{pendingInviteSummary.creatorAvatarUrl || '/images/default-avatar.svg'}}"
+          mode="aspectFill"
+        ></image>
+        <view class="invite-owner-meta">
+          <view class="invite-owner-name">{{pendingInviteSummary.creatorName}}</view>
+          <view class="invite-owner-sub">邀请你加入睡眠挑战</view>
+        </view>
+      </view>
+      <view class="invite-head">
+        <view class="title">挑战邀请</view>
+        <view class="invite-entry-tag" wx:if="{{fromInviteEntry}}">来自分享</view>
+      </view>
       <view class="line">挑战：{{pendingInviteSummary.name}}</view>
       <view class="line">天数：{{pendingInviteSummary.targetDays}} 天</view>
       <view class="line">睡眠时间：{{pendingInviteSummary.sleepWindowText}}</view>
+      <view class="line">当前状态：{{pendingInviteSummary.statusText}}</view>
+      <view class="line">你的状态：{{pendingInviteSummary.meAcceptText}}</view>
+      <view class="invite-tip-box">
+        <view class="invite-tip">1. 接受后将加入本次组队挑战</view>
+        <view class="invite-tip">2. 满 {{pendingInviteSummary.requiredCount}} 人确认后自动开赛</view>
+      </view>
       <button class="create-btn" bindtap="onAcceptInvite">接受挑战</button>
+      <button class="sub-btn" bindtap="onLaterDealInvite">稍后处理</button>
     </view>
 
     <view class="card" wx:if="{{showCreateCard}}">
@@ -74,11 +82,10 @@
       </view>
 
       <view class="field">
-        <view class="field-label">参与人</view>
+        <view class="field-label">邀请方式</view>
         <view class="participant-preview">
-          <text>{{participantPreviewText}}</text>
+          <text>创建后通过微信“分享”邀请好友或群成员加入</text>
         </view>
-        <button class="sub-btn" bindtap="goSelectTargets">选择用户或群组</button>
       </view>
     </view>
 
@@ -96,6 +103,7 @@
       <view class="line">挑战天数：{{activeSummary.targetDays}} 天</view>
       <view class="line">睡眠时间：{{activeSummary.sleepWindowText}}</view>
       <view class="line">挑战状态：{{activeSummary.statusText}}</view>
+      <view class="line">开赛人数：{{activeSummary.confirmedCount}} / {{activeSummary.requiredCount}}</view>
       <view class="line" wx:if="{{activeSummary.startDateText !== '--'}}">
         开始时间：{{activeSummary.startDateText}}
       </view>
@@ -110,6 +118,14 @@
         <view class="accept-tag {{item.accepted ? 'ok' : 'pending'}}">
           <text>{{item.acceptText}}</text>
         </view>
+      </view>
+
+      <view class="field" wx:if="{{activeSummary.canInviteMore}}">
+        <view class="field-label">继续邀请成员</view>
+        <view class="participant-preview">
+          <text>点击下方按钮，分享给好友或群组</text>
+        </view>
+        <button class="sub-btn" open-type="share">分享邀请</button>
       </view>
 
       <button

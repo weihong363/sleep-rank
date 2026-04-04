@@ -4,6 +4,31 @@
   </view>
 
   <view
+    class="cloud-profile-banner"
+    wx:if="{{!requireProfileComplete && requireCloudProfileSetup}}"
+    bindtap="onGoCloudProfileSetup"
+  >
+    {{cloudProfileSetupText}}
+  </view>
+
+  <view class="profile-bar" wx:if="{{requireProfileComplete}}">
+    <view class="profile-title">首次使用请先完善个人资料</view>
+    <input
+      class="profile-input"
+      type="nickname"
+      placeholder="请输入昵称"
+      value="{{profileNickName}}"
+      bindinput="onProfileNickInput"
+    />
+    <view class="profile-actions">
+      <button class="profile-choose-btn" open-type="chooseAvatar" bindchooseavatar="onChooseProfileAvatar">
+        {{profileAvatarUrl ? '已选择头像' : '选择头像'}}
+      </button>
+      <view class="profile-save-btn" bindtap="onSaveProfileFromHome">保存资料</view>
+    </view>
+  </view>
+
+  <view
     class="button-wrap {{isSleeping ? 'is-sleeping' : ''}}"
     bindtap="handleTap"
   >
@@ -23,8 +48,8 @@
   </view>
 
   <view class="entry-bar">
-    <view class="entry-chip" bindtap="goCreateChallenge">创建挑战</view>
+    <view class="entry-chip" bindtap="goCreateChallenge">挑战中心</view>
     <view class="entry-chip" bindtap="goCheckIn">我的记录</view>
-    <!-- <view class="entry-chip" bindtap="goLeaderboard">排行榜</view> -->
+    <view class="entry-chip" bindtap="goProfile">个人资料</view>
   </view>
 </view>

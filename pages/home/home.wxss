@@ -28,6 +28,99 @@
   transform: scale(1.08);
 }
 
+.invite-banner {
+  position: absolute;
+  top: 92rpx;
+  left: 24rpx;
+  right: 24rpx;
+  z-index: 30;
+  padding: 18rpx 24rpx;
+  border-radius: 20rpx;
+  text-align: center;
+  color: #2b1b22;
+  font-weight: 600;
+  background: linear-gradient(135deg, rgba(255, 210, 177, 0.95), rgba(255, 236, 197, 0.94));
+  border: 1rpx solid rgba(255, 240, 227, 0.86);
+  box-shadow: 0 10rpx 20rpx rgba(12, 14, 34, 0.32);
+}
+
+.cloud-profile-banner {
+  position: absolute;
+  top: 156rpx;
+  left: 24rpx;
+  right: 24rpx;
+  z-index: 29;
+  padding: 16rpx 22rpx;
+  border-radius: 18rpx;
+  text-align: center;
+  color: rgba(47, 31, 38, 0.96);
+  font-size: 24rpx;
+  background: linear-gradient(135deg, rgba(255, 221, 192, 0.94), rgba(255, 236, 211, 0.93));
+  border: 1rpx solid rgba(255, 243, 231, 0.88);
+  box-shadow: 0 10rpx 18rpx rgba(12, 14, 34, 0.28);
+}
+
+.profile-bar {
+  position: absolute;
+  top: 156rpx;
+  left: 24rpx;
+  right: 24rpx;
+  z-index: 28;
+  border-radius: 20rpx;
+  padding: 18rpx;
+  background: rgba(42, 47, 80, 0.82);
+  border: 1rpx solid rgba(238, 214, 194, 0.34);
+  box-shadow: 0 10rpx 18rpx rgba(12, 14, 34, 0.28);
+}
+
+.profile-title {
+  font-size: 23rpx;
+  color: rgba(255, 236, 224, 0.92);
+}
+
+.profile-input {
+  margin-top: 10rpx;
+  height: 58rpx;
+  border-radius: 12rpx;
+  padding: 0 14rpx;
+  font-size: 23rpx;
+  color: rgba(255, 245, 236, 0.96);
+  background: rgba(28, 34, 61, 0.7);
+  border: 1rpx solid rgba(235, 212, 195, 0.35);
+}
+
+.profile-actions {
+  margin-top: 12rpx;
+  display: flex;
+  gap: 10rpx;
+}
+
+.profile-choose-btn,
+.profile-save-btn {
+  flex: 1;
+  height: 54rpx;
+  border-radius: 9999rpx;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22rpx;
+}
+
+.profile-choose-btn {
+  color: rgba(255, 236, 224, 0.92);
+  background: rgba(28, 34, 61, 0.75);
+  border: 1rpx solid rgba(235, 212, 195, 0.35);
+}
+
+.profile-choose-btn::after {
+  border: none;
+}
+
+.profile-save-btn {
+  color: #2c1b20;
+  background: linear-gradient(135deg, rgba(255, 212, 181, 0.98), rgba(255, 237, 206, 0.96));
+}
+
 .button-wrap {
   position: relative;
   width: 46vw;
@@ -111,22 +204,6 @@
   animation: ripple 0.7s ease-out forwards;
 }
 
-.invite-banner {
-  position: absolute;
-  top: 92rpx;
-  left: 24rpx;
-  right: 24rpx;
-  z-index: 30;
-  padding: 18rpx 24rpx;
-  border-radius: 20rpx;
-  text-align: center;
-  color: #2b1b22;
-  font-weight: 600;
-  background: linear-gradient(135deg, rgba(255, 210, 177, 0.95), rgba(255, 236, 197, 0.94));
-  border: 1rpx solid rgba(255, 240, 227, 0.86);
-  box-shadow: 0 10rpx 20rpx rgba(12, 14, 34, 0.32);
-}
-
 .entry-bar {
   position: absolute;
   left: 24rpx;
@@ -134,17 +211,17 @@
   bottom: 58rpx;
   z-index: 5;
   display: flex;
-  gap: 16rpx;
+  gap: 12rpx;
 }
 
 .entry-chip {
   flex: 1;
-  height: 76rpx;
+  height: 74rpx;
   border-radius: 9999rpx;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 26rpx;
+  font-size: 25rpx;
   color: rgba(255, 242, 232, 0.94);
   background: linear-gradient(
     180deg,

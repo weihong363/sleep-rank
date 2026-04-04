@@ -57,5 +57,6 @@
   "simulatorPluginLibVersion": {},
   "isGameTourist": false,
   "cloudfunctionRoot": "functions/",
-  "miniprogramRoot": "./"
+  "miniprogramRoot": "./",
+  "cloudfunctionTemplateRoot": "cloudfunctionTemplate/"
 }

@@ -39,6 +39,7 @@ function bootstrap() {
   const userEngine = require(path.join(ROOT, 'engines/user-engine.js'));
   const sleepEngine = require(path.join(ROOT, 'engines/sleep-engine.js'));
   const leaderboardEngine = require(path.join(ROOT, 'engines/leaderboard-engine.js'));
+  const pointEngine = require(path.join(ROOT, 'engines/point-engine.js'));
   const storage = require(path.join(ROOT, 'store/storage.js'));
   const keys = require(path.join(ROOT, 'store/keys.js'));
   return {
@@ -47,6 +48,7 @@ function bootstrap() {
     userEngine,
     sleepEngine,
     leaderboardEngine,
+    pointEngine,
     storage,
     keys
   };
@@ -150,15 +152,19 @@ test('core flow: create -> accept -> sleep checkin -> daily result persisted', (
     targetDays: 7,
     sleepWindowStart: '23:00',
     sleepWindowEnd: '07:00',
-    participants: [{ userId: 'u_hao' }]
+    participants: [{ userId: 'u_hao' }, { userId: 'u_nan' }]
   });
   assert.strictEqual(createRes.ok, true);
   assert.strictEqual(createRes.challenge.status, 'PENDING');
 
   userEngine.setCurrentUserId('u_hao');
-  const acceptRes = challengeEngine.acceptChallenge();
-  assert.strictEqual(acceptRes.ok, true);
-  assert.strictEqual(acceptRes.challenge.status, 'ONGOING');
+  const acceptHao = challengeEngine.acceptChallenge();
+  assert.strictEqual(acceptHao.ok, true);
+  assert.strictEqual(acceptHao.challenge.status, 'PENDING');
+  userEngine.setCurrentUserId('u_nan');
+  const acceptNan = challengeEngine.acceptChallenge();
+  assert.strictEqual(acceptNan.ok, true);
+  assert.strictEqual(acceptNan.challenge.status, 'ONGOING');
 
   userEngine.setCurrentUserId('u_mei');
   const checkinTime = new Date(2026, 3, 3, 22, 55).getTime();
@@ -190,10 +196,15 @@ test('FAIL_MISS lock: after miss is fixed for the day, user cannot check in agai
     targetDays: 7,
     sleepWindowStart: '21:00',
     sleepWindowEnd: '07:00',
-    participants: []
+    participants: [{ userId: 'u_hao' }, { userId: 'u_nan' }]
   });
   assert.strictEqual(createRes.ok, true);
-  assert.strictEqual(createRes.challenge.status, 'ONGOING');
+  assert.strictEqual(createRes.challenge.status, 'PENDING');
+  userEngine.setCurrentUserId('u_hao');
+  challengeEngine.acceptChallenge();
+  userEngine.setCurrentUserId('u_nan');
+  challengeEngine.acceptChallenge();
+  userEngine.setCurrentUserId('u_mei');
 
   const afterDeadline = new Date(2026, 3, 3, 22, 30).getTime();
   const miss = withMockNow(afterDeadline, () => challengeEngine.getTodayChallengeResult());
@@ -216,11 +227,13 @@ test('period end ack: only when last participant acks, challenge completes and a
     targetDays: 1,
     sleepWindowStart: '23:00',
     sleepWindowEnd: '07:00',
-    participants: [{ userId: 'u_hao' }]
+    participants: [{ userId: 'u_hao' }, { userId: 'u_nan' }]
   });
   assert.strictEqual(createRes.ok, true);
 
   userEngine.setCurrentUserId('u_hao');
+  challengeEngine.acceptChallenge();
+  userEngine.setCurrentUserId('u_nan');
   challengeEngine.acceptChallenge();
 
   const challenge = challengeEngine.getActiveChallenge();
@@ -250,14 +263,20 @@ test('period end ack: only when last participant acks, challenge completes and a
   withMockNow(new Date(2026, 3, 3, 10, 6).getTime(), () => {
     const ack2 = challengeEngine.acknowledgeChallengeEndByCurrentUser();
     assert.strictEqual(ack2.ok, true);
-    assert.strictEqual(ack2.state, 'COMPLETED');
+    assert.strictEqual(ack2.state, 'WAITING');
+  });
+  userEngine.setCurrentUserId('u_nan');
+  withMockNow(new Date(2026, 3, 3, 10, 7).getTime(), () => {
+    const ack3 = challengeEngine.acknowledgeChallengeEndByCurrentUser();
+    assert.strictEqual(ack3.ok, true);
+    assert.strictEqual(ack3.state, 'COMPLETED');
   });
 
   userEngine.setCurrentUserId('u_mei');
   const createAfterCompleted = challengeEngine.createChallenge({
     name: '新挑战',
     targetDays: 3,
-    participants: []
+    participants: [{ userId: 'u_hao' }, { userId: 'u_nan' }]
   });
   assert.strictEqual(createAfterCompleted.ok, true);
 });
@@ -270,13 +289,15 @@ test('model fields coverage: ChallengeMember / SleepSession / SleepRecord / Dail
     targetDays: 2,
     sleepWindowStart: '23:00',
     sleepWindowEnd: '07:00',
-    participants: [{ userId: 'u_hao' }]
+    participants: [{ userId: 'u_hao' }, { userId: 'u_nan' }]
   });
   assert.strictEqual(createRes.ok, true);
   assert.ok(Array.isArray(createRes.challenge.participants));
   assert.ok(createRes.challenge.participants[0].hasOwnProperty('accepted'));
 
   userEngine.setCurrentUserId('u_hao');
+  challengeEngine.acceptChallenge();
+  userEngine.setCurrentUserId('u_nan');
   challengeEngine.acceptChallenge();
   userEngine.setCurrentUserId('u_mei');
 
@@ -321,12 +342,15 @@ test('leaderboard uses real data for challenge board and total board', () => {
     targetDays: 7,
     sleepWindowStart: '23:00',
     sleepWindowEnd: '07:00',
-    participants: [{ userId: 'u_hao' }]
+    participants: [{ userId: 'u_hao' }, { userId: 'u_nan' }]
   });
   assert.strictEqual(createRes.ok, true);
   userEngine.setCurrentUserId('u_hao');
-  const acceptRes = challengeEngine.acceptChallenge();
-  assert.strictEqual(acceptRes.ok, true);
+  const acceptHao = challengeEngine.acceptChallenge();
+  assert.strictEqual(acceptHao.ok, true);
+  userEngine.setCurrentUserId('u_nan');
+  const acceptNan = challengeEngine.acceptChallenge();
+  assert.strictEqual(acceptNan.ok, true);
   userEngine.setCurrentUserId('u_mei');
 
   const meiRecord = buildSleepRecord({
@@ -349,11 +373,13 @@ test('leaderboard uses real data for challenge board and total board', () => {
   const challengeBoard = leaderboardEngine.buildChallengeLeaderboard(challenge);
   const totalBoard = leaderboardEngine.buildUserTotalLeaderboard(challenge);
 
-  assert.strictEqual(challengeBoard.length, 2);
+  assert.strictEqual(challengeBoard.length, 3);
   const meInChallenge = challengeBoard.find((item) => item.userId === 'u_mei');
   const haoInChallenge = challengeBoard.find((item) => item.userId === 'u_hao');
+  const nanInChallenge = challengeBoard.find((item) => item.userId === 'u_nan');
   assert.ok(meInChallenge);
   assert.ok(haoInChallenge);
+  assert.ok(nanInChallenge);
   assert.strictEqual(meInChallenge.successRate, 100);
   assert.strictEqual(haoInChallenge.successRate, 0);
   assert.ok(meInChallenge.totalScore > haoInChallenge.totalScore);
@@ -362,6 +388,94 @@ test('leaderboard uses real data for challenge board and total board', () => {
   const meInTotal = totalBoard.find((item) => item.userId === 'u_mei');
   assert.ok(meInTotal);
   assert.ok(meInTotal.totalScore >= meInChallenge.totalScore);
+});
+
+test('P1 group flow: participants confirm then auto start with >=3 members', () => {
+  const { challengeEngine, userEngine } = bootstrap();
+  userEngine.setCurrentUserId('u_mei');
+  const createRes = challengeEngine.createChallenge({
+    name: '三人挑战',
+    targetDays: 3,
+    participants: [{ userId: 'u_hao' }, { userId: 'u_nan' }]
+  });
+  assert.strictEqual(createRes.ok, true);
+  assert.strictEqual(createRes.challenge.status, 'PENDING');
+
+  userEngine.setCurrentUserId('u_hao');
+  const accept1 = challengeEngine.acceptChallenge();
+  assert.strictEqual(accept1.ok, true);
+  assert.strictEqual(accept1.challenge.status, 'PENDING');
+
+  userEngine.setCurrentUserId('u_nan');
+  const accept2 = challengeEngine.acceptChallenge();
+  assert.strictEqual(accept2.ok, true);
+  assert.strictEqual(accept2.challenge.status, 'ONGOING');
+});
+
+test('P1 invite flow: creator can append invitees while pending, then newly invited user can accept', () => {
+  const { challengeEngine, userEngine } = bootstrap();
+  userEngine.setCurrentUserId('u_mei');
+  const createRes = challengeEngine.createChallenge({
+    name: '追加邀请测试',
+    targetDays: 3,
+    participants: [{ userId: 'u_hao' }, { userId: 'u_nan' }]
+  });
+  assert.strictEqual(createRes.ok, true);
+  assert.strictEqual(createRes.challenge.status, 'PENDING');
+
+  userEngine.setCurrentUserId('u_hao');
+  const acceptHao = challengeEngine.acceptChallenge();
+  assert.strictEqual(acceptHao.ok, true);
+  assert.strictEqual(acceptHao.challenge.status, 'PENDING');
+
+  userEngine.setCurrentUserId('u_mei');
+  const inviteRes = challengeEngine.inviteParticipants([{ userId: 'u_chen' }]);
+  assert.strictEqual(inviteRes.ok, true);
+  assert.strictEqual(inviteRes.addedCount, 1);
+
+  userEngine.setCurrentUserId('u_nan');
+  const acceptNan = challengeEngine.acceptChallenge();
+  assert.strictEqual(acceptNan.ok, true);
+  assert.strictEqual(acceptNan.challenge.status, 'ONGOING');
+});
+
+test('P1 points and history: challenge complete writes history and point logs', () => {
+  const { challengeEngine, userEngine, pointEngine } = bootstrap();
+  userEngine.setCurrentUserId('u_mei');
+  const createRes = challengeEngine.createChallenge({
+    name: '积分挑战',
+    targetDays: 1,
+    participants: [{ userId: 'u_hao' }, { userId: 'u_nan' }]
+  });
+  assert.strictEqual(createRes.ok, true);
+  userEngine.setCurrentUserId('u_hao');
+  challengeEngine.acceptChallenge();
+  userEngine.setCurrentUserId('u_nan');
+  challengeEngine.acceptChallenge();
+
+  const challenge = challengeEngine.getActiveChallenge();
+  challenge.startDate = new Date(2026, 2, 30, 10, 0).getTime();
+  userEngine.setCurrentUserId('u_hao');
+  withMockNow(new Date(2026, 3, 3, 10, 0).getTime(), () => {
+    challengeEngine.acknowledgeChallengeEndByCurrentUser();
+  });
+  userEngine.setCurrentUserId('u_nan');
+  withMockNow(new Date(2026, 3, 3, 10, 1).getTime(), () => {
+    challengeEngine.acknowledgeChallengeEndByCurrentUser();
+  });
+  userEngine.setCurrentUserId('u_mei');
+  withMockNow(new Date(2026, 3, 3, 10, 2).getTime(), () => {
+    const done = challengeEngine.acknowledgeChallengeEndByCurrentUser();
+    assert.strictEqual(done.ok, true);
+    assert.strictEqual(done.state, 'COMPLETED');
+  });
+
+  const history = challengeEngine.getChallengeHistory();
+  assert.ok(history.length >= 1);
+  const myHistory = challengeEngine.getCurrentUserChallengeHistory();
+  assert.ok(myHistory.length >= 1);
+  const pointLogs = pointEngine.getPointLogs('u_mei');
+  assert.ok(pointLogs.length >= 1);
 });
 
 if (!process.exitCode) {

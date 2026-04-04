@@ -22,6 +22,7 @@
       <view class="line">挑战进度：{{checkedDays}} / {{targetDays}}</view>
       <view class="line">本次挑战得分：{{currentChallengeScore}}</view>
       <view class="line">总积分：{{totalScore}}</view>
+      <view class="line">账户积分余额：{{pointBalance}}</view>
       <view class="line">未完成挑战：{{missedChallenges}} 次</view>
       <view class="line-tip">说明：挑战结束时未达标计 1 次</view>
       <view class="line">睡眠状态：{{isSleeping ? '进行中' : '未开始'}}</view>
@@ -29,6 +30,52 @@
       <view class="line">会话 wake_count：{{wakeCount}}</view>
       <view class="line" wx:if="{{latestRecord}}">
         最近记录：睡眠分 {{latestRecord.sleepScore}}（{{latestRecord.durationMinutes}} 分钟）
+      </view>
+
+      <view class="history-wrap">
+        <view class="history-title">本月挑战日历</view>
+        <view class="calendar-grid">
+          <view
+            class="calendar-cell {{item.toneClass}}"
+            wx:for="{{calendarCells}}"
+            wx:key="key"
+          >
+            <text class="calendar-day">{{item.dayText}}</text>
+            <text class="calendar-status">{{item.statusText}}</text>
+          </view>
+        </view>
+      </view>
+
+      <view class="history-wrap">
+        <view class="history-title">历史挑战</view>
+        <view class="history-empty" wx:if="{{challengeHistory.length === 0}}">
+          暂无历史挑战
+        </view>
+        <view
+          class="card history-card history-tone-1"
+          wx:for="{{challengeHistory}}"
+          wx:key="id"
+        >
+          <view class="line">挑战：{{item.name}}</view>
+          <view class="line">状态：{{item.statusText}}</view>
+          <view class="line">周期：{{item.periodText}}</view>
+          <view class="line">我的得分：{{item.score}}</view>
+        </view>
+      </view>
+
+      <view class="history-wrap">
+        <view class="history-title">积分流水（最近 5 条）</view>
+        <view class="history-empty" wx:if="{{pointLogs.length === 0}}">
+          暂无积分变动
+        </view>
+        <view
+          class="card history-card history-tone-2"
+          wx:for="{{pointLogs}}"
+          wx:key="id"
+        >
+          <view class="line">变动：{{item.deltaText}}</view>
+          <view class="line">原因：{{item.reasonText}}</view>
+        </view>
       </view>
 
       <view class="history-wrap">

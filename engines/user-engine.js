@@ -1,12 +1,8 @@
 const storage = require('../store/storage');
 const keys = require('../store/keys');
+const cloudSyncEngine = require('./cloud-sync-engine');
 
-/**
- * User Engine
- * - MVP 本地用户与群组数据
- * - 提供当前用户身份切换能力（用于模拟“被邀请人接受挑战”流程）
- */
-const USERS = [
+const MOCK_USERS = [
   { id: 'u_mei', name: '小美' },
   { id: 'u_hao', name: '小浩' },
   { id: 'u_nan', name: '小楠' },
@@ -14,35 +10,300 @@ const USERS = [
   { id: 'u_leo', name: 'Leo' }
 ];
 
-const GROUPS = [
+const MOCK_GROUPS = [
   { id: 'g_early', name: '早睡俱乐部', memberIds: ['u_mei', 'u_hao', 'u_nan'] },
   { id: 'g_team', name: '晚安挑战群', memberIds: ['u_mei', 'u_chen', 'u_leo'] }
 ];
 
-function getUsers() {
-  return USERS;
-}
-
-function getGroups() {
-  return GROUPS;
-}
-
 function getCurrentUserId() {
-  const saved = storage.get(keys.CURRENT_USER_ID, null);
-  return saved || USERS[0].id;
+  return storage.get(keys.CURRENT_USER_ID, null);
 }
 
 function setCurrentUserId(userId) {
+  if (!userId) {
+    return;
+  }
   storage.set(keys.CURRENT_USER_ID, userId);
 }
 
-function getCurrentUser() {
-  const id = getCurrentUserId();
-  return USERS.find((u) => u.id === id) || USERS[0];
+function getUserDirectory() {
+  return storage.get(keys.USER_DIRECTORY, {});
+}
+
+function saveUserDirectory(directory) {
+  storage.set(keys.USER_DIRECTORY, directory);
+}
+
+function upsertUser(user) {
+  if (!user || !user.id) {
+    return null;
+  }
+  const directory = getUserDirectory();
+  directory[user.id] = {
+    ...directory[user.id],
+    ...user,
+    updatedAt: Date.now()
+  };
+  saveUserDirectory(directory);
+  cloudSyncEngine.syncUserProfile(directory[user.id]);
+  return directory[user.id];
+}
+
+function isCloudUserId(userId) {
+  return Boolean(userId && !String(userId).startsWith('u_'));
+}
+
+function getUsers() {
+  const directory = getUserDirectory();
+  const values = Object.keys(directory).map((id) => directory[id]);
+  if (values.length === 0) {
+    return MOCK_USERS;
+  }
+  const map = {};
+  values.forEach((item) => {
+    map[item.id] = item;
+  });
+  MOCK_USERS.forEach((item) => {
+    if (!map[item.id]) {
+      map[item.id] = item;
+    }
+  });
+  return Object.keys(map).map((id) => map[id]);
+}
+
+function getGroups() {
+  const currentUserId = getCurrentUserId();
+  if (isCloudUserId(currentUserId)) {
+    return [];
+  }
+  return MOCK_GROUPS;
 }
 
 function getUserById(userId) {
-  return USERS.find((u) => u.id === userId) || null;
+  if (!userId) {
+    return null;
+  }
+  const directory = getUserDirectory();
+  if (directory[userId]) {
+    return directory[userId];
+  }
+  return MOCK_USERS.find((u) => u.id === userId) || null;
+}
+
+function getCurrentUser() {
+  const currentUserId = getCurrentUserId();
+  if (!currentUserId) {
+    return MOCK_USERS[0];
+  }
+  return getUserById(currentUserId) || { id: currentUserId, name: `用户${String(currentUserId).slice(-6)}` };
+}
+
+function ensureCurrentUser() {
+  const currentUserId = getCurrentUserId();
+  if (currentUserId) {
+    const found = getUserById(currentUserId);
+    if (found) {
+      return found;
+    }
+    const fallback = { id: currentUserId, name: `用户${String(currentUserId).slice(-6)}` };
+    return upsertUser(fallback) || fallback;
+  }
+  const fallback = MOCK_USERS[0];
+  setCurrentUserId(fallback.id);
+  upsertUser(fallback);
+  return fallback;
+}
+
+function upsertCurrentUserProfile(profile = {}) {
+  const currentUser = ensureCurrentUser();
+  const next = {
+    ...currentUser,
+    name: profile.nickName || profile.name || currentUser.name,
+    nickName: profile.nickName || profile.name || currentUser.nickName || currentUser.name,
+    avatarUrl: profile.avatarUrl || currentUser.avatarUrl || '',
+    openid: profile.openid || currentUser.openid || null,
+    cloudProfileExists: profile.cloudProfileExists === true || currentUser.cloudProfileExists === true
+  };
+  return upsertUser(next);
+}
+
+function fetchWechatProfile() {
+  if (typeof wx === 'undefined' || !wx || typeof wx.getUserProfile !== 'function') {
+    return Promise.reject(new Error('USER_PROFILE_API_UNAVAILABLE'));
+  }
+
+  const runGetUserProfile = () => new Promise((resolve, reject) => {
+    wx.getUserProfile({
+      desc: '用于完善你的昵称和头像',
+      success: (res) => resolve(res.userInfo || {}),
+      fail: (err) => reject(err)
+    });
+  });
+  if (typeof wx.requirePrivacyAuthorize !== 'function') {
+    return runGetUserProfile();
+  }
+  return new Promise((resolve, reject) => {
+    wx.requirePrivacyAuthorize({
+      success: () => runGetUserProfile().then(resolve).catch(reject),
+      fail: (err) => reject(err)
+    });
+  });
+}
+
+function authorizeCurrentUserProfile() {
+  return fetchWechatProfile().then((userInfo) => {
+    const profile = upsertCurrentUserProfile({
+      nickName: userInfo.nickName,
+      avatarUrl: userInfo.avatarUrl
+    });
+    return profile;
+  });
+}
+
+function isMaskedWechatProfile(userInfo = {}) {
+  const nickName = String(userInfo.nickName || '').trim();
+  const avatarUrl = String(userInfo.avatarUrl || '').trim();
+  // 如果没有昵称或头像，或者昵称为默认值，则认为是匿名
+  const maskedName = !nickName || nickName === '微信用户' || nickName.startsWith('用户');
+  return maskedName || !avatarUrl;
+}
+
+function isValidNickname(nickName) {
+  const value = String(nickName || '').trim();
+  if (!value) {
+    return false;
+  }
+  if (value === '微信用户' || value.startsWith('用户')) {
+    return false;
+  }
+  return true;
+}
+
+function shouldPromptProfileAuth(user = getCurrentUser()) {
+  return isMaskedWechatProfile({
+    nickName: user.nickName || user.name,
+    avatarUrl: user.avatarUrl
+  });
+}
+
+function isProfileCompleted(user = getCurrentUser()) {
+  if (user && user.cloudProfileExists) {
+    return true;
+  }
+  const nick = user.nickName || user.name;
+  const avatar = user.avatarUrl || '';
+  return isValidNickname(nick) && Boolean(String(avatar).trim());
+}
+
+function shouldPromptCloudProfileSetup(user = getCurrentUser()) {
+  if (!user || !user.cloudProfileExists) {
+    return {
+      shouldPrompt: false,
+      missingNickname: false,
+      missingAvatar: false
+    };
+  }
+  const nick = user.nickName || user.name || '';
+  const missingNickname = !isValidNickname(nick);
+  const missingAvatar = !String(user.avatarUrl || '').trim();
+  return {
+    shouldPrompt: missingNickname || missingAvatar,
+    missingNickname,
+    missingAvatar
+  };
+}
+
+function saveProfile({ nickName, avatarUrl }) {
+  if (!isValidNickname(nickName)) {
+    return { ok: false, reason: 'INVALID_NICKNAME' };
+  }
+  if (!String(avatarUrl || '').trim()) {
+    return { ok: false, reason: 'MISSING_AVATAR' };
+  }
+  const profile = upsertCurrentUserProfile({
+    nickName: String(nickName).trim(),
+    avatarUrl: String(avatarUrl).trim()
+  });
+  return { ok: true, profile };
+}
+
+function authorizeCurrentUserProfileOneTap(eventUserInfo) {
+  if (eventUserInfo && !isMaskedWechatProfile(eventUserInfo)) {
+    const profile = upsertCurrentUserProfile({
+      nickName: eventUserInfo.nickName,
+      avatarUrl: eventUserInfo.avatarUrl
+    });
+    return Promise.resolve({
+      ok: true,
+      profile,
+      source: 'getUserProfile',
+      masked: false
+    });
+  }
+  return authorizeCurrentUserProfile()
+    .then((profile) => {
+      const masked = isMaskedWechatProfile(profile);
+      if (masked) {
+        const current = ensureCurrentUser();
+        return {
+          ok: true,
+          profile: current,
+          source: 'getUserProfile',
+          masked: true
+        };
+      }
+      return {
+        ok: true,
+        profile,
+        source: 'getUserProfile',
+        masked: false
+      };
+    });
+}
+
+function bootstrapCloudUser() {
+  if (typeof wx === 'undefined' || !wx || !wx.cloud || typeof wx.cloud.callFunction !== 'function') {
+    return Promise.resolve(ensureCurrentUser());
+  }
+  return wx.cloud.callFunction({
+    name: 'login'
+  }).then((res) => {
+    const openid = res && res.result && res.result.openid;
+    if (!openid) {
+      return ensureCurrentUser();
+    }
+    setCurrentUserId(openid);
+    const fallbackUser = {
+      id: openid,
+      openid,
+      name: `用户${String(openid).slice(-6)}`,
+      avatarUrl: '',
+      cloudProfileExists: false
+    };
+    const applyCloudUser = (cloudUser) => {
+      if (!cloudUser) {
+        return upsertCurrentUserProfile({
+          openid,
+          cloudProfileExists: false
+        }) || fallbackUser;
+      }
+      return upsertCurrentUserProfile({
+        openid,
+        name: cloudUser.name,
+        nickName: cloudUser.nickName || cloudUser.name,
+        avatarUrl: cloudUser.avatarUrl || '',
+        cloudProfileExists: true
+      }) || fallbackUser;
+    };
+    return cloudSyncEngine.pullUserProfile(openid)
+      .then((cloudUserById) => {
+        if (cloudUserById) {
+          return applyCloudUser(cloudUserById);
+        }
+        return cloudSyncEngine.pullUserProfileByOpenid(openid)
+          .then((cloudUserByOpenid) => applyCloudUser(cloudUserByOpenid));
+      });
+  }).catch(() => ensureCurrentUser());
 }
 
 module.exports = {
@@ -51,5 +312,17 @@ module.exports = {
   getCurrentUser,
   getCurrentUserId,
   setCurrentUserId,
-  getUserById
+  getUserById,
+  upsertUser,
+  upsertCurrentUserProfile,
+  authorizeCurrentUserProfile,
+  authorizeCurrentUserProfileOneTap,
+  isMaskedWechatProfile,
+  isValidNickname,
+  shouldPromptProfileAuth,
+  shouldPromptCloudProfileSetup,
+  isProfileCompleted,
+  saveProfile,
+  ensureCurrentUser,
+  bootstrapCloudUser
 };

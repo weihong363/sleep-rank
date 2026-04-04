@@ -51,22 +51,9 @@
 
   CREATED → READY → RUNNING → FINISHED → CANCELLED
 
-
 ---
 
-## 3. 支持多挑战 + 历史挑战
-
-### 当前问题
-仅支持一个 ACTIVE_CHALLENGE
-
-### 改造
-- `activeChallengeId`
-- `challengeMap`
-- `challengeHistoryIds`
-
----
-
-## 4. 真实排行榜
+## 3. 真实排行榜
 
 ### 当前问题
 演示榜 / mock 数据
@@ -82,7 +69,7 @@
 
 ---
 
-## 5. 引擎层测试
+## 4. 引擎层测试
 
 ### 必测场景
 - 创建挑战
@@ -128,7 +115,6 @@
 ## 8. 邀请与组队系统
 
 ### 功能
-- 邀请链接 / 邀请码
 - 成员状态：
   - invited
   - joined
