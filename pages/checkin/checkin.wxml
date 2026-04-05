@@ -52,14 +52,22 @@
           暂无历史挑战
         </view>
         <view
-          class="card history-card history-tone-1"
+          class="card history-card history-tone-1 history-drawer-card"
           wx:for="{{challengeHistory}}"
           wx:key="id"
+          data-id="{{item.id}}"
+          bindtap="toggleChallengeHistoryItem"
         >
-          <view class="line">挑战：{{item.name}}</view>
-          <view class="line">状态：{{item.statusText}}</view>
-          <view class="line">周期：{{item.periodText}}</view>
-          <view class="line">我的得分：{{item.score}}</view>
+          <view class="history-drawer-head">
+            <text class="history-drawer-title">{{item.name}}</text>
+            <text class="history-drawer-arrow">{{item.expanded ? '收起' : '展开'}}</text>
+          </view>
+          <view class="history-drawer-body" wx:if="{{item.expanded}}">
+            <view class="line">状态：{{item.statusText}}</view>
+            <view class="line">周期：{{item.periodText}}</view>
+            <view class="line">完成时间：{{item.completedAtText}}</view>
+            <view class="line">我的得分：{{item.score}}</view>
+          </view>
         </view>
       </view>
 

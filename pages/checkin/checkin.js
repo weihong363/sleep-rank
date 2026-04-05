@@ -99,7 +99,8 @@ Page({
     pointBalance: 0,
     pointLogs: [],
     calendarCells: [],
-    historyExpanded: false
+    historyExpanded: false,
+    challengeHistoryExpandedMap: {}
   },
 
   onShow() {
@@ -143,12 +144,15 @@ Page({
     const myDailyResults = challenge && Array.isArray(challenge.dailyResults)
       ? challenge.dailyResults.filter((item) => item.userId === currentUserId)
       : [];
+    const prevExpandedMap = this.data.challengeHistoryExpandedMap || {};
     const challengeHistory = challengeEngine.getCurrentUserChallengeHistory()
       .map((item) => ({
         id: item.id,
         name: item.name,
-        statusText: item.status === challengeEngine.CHALLENGE_STATUS.COMPLETED ? '已完成' : '已取消',
+        statusText: '已完成',
         periodText: `${item.targetDays} 天`,
+        completedAtText: item.completedAt ? sleepEngine.formatDateTime(item.completedAt) : '--',
+        expanded: Boolean(prevExpandedMap[item.id]),
         score: item.checkIns
           .filter((record) => record.userId === currentUserId)
           .reduce((sum, record) => sum + record.dailyScore, 0)
@@ -203,13 +207,34 @@ Page({
         deltaText: item.delta > 0 ? `+${item.delta}` : `${item.delta}`,
         reasonText: POINT_REASON_TEXT_MAP[item.reason] || item.reason
       })),
-      calendarCells: buildMonthCalendar(myDailyResults)
+      calendarCells: buildMonthCalendar(myDailyResults),
+      challengeHistoryExpandedMap: challengeHistory.reduce((acc, item) => {
+        acc[item.id] = item.expanded;
+        return acc;
+      }, {})
     });
   },
 
   toggleHistory() {
     this.setData({
       historyExpanded: !this.data.historyExpanded
+    });
+  },
+
+  toggleChallengeHistoryItem(e) {
+    const id = e && e.currentTarget && e.currentTarget.dataset && e.currentTarget.dataset.id;
+    if (!id) {
+      return;
+    }
+    const map = { ...(this.data.challengeHistoryExpandedMap || {}) };
+    map[id] = !map[id];
+    this.setData({
+      challengeHistoryExpandedMap: map,
+      challengeHistory: (this.data.challengeHistory || []).map((item) => (
+        item.id === id
+          ? { ...item, expanded: Boolean(map[id]) }
+          : item
+      ))
     });
   }
 });

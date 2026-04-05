@@ -160,6 +160,34 @@ page {
   padding: 22rpx;
 }
 
+.history-drawer-card {
+  padding-top: 18rpx;
+  padding-bottom: 18rpx;
+}
+
+.history-drawer-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.history-drawer-title {
+  font-size: 28rpx;
+  color: #2f3550;
+  font-weight: 600;
+}
+
+.history-drawer-arrow {
+  font-size: 24rpx;
+  color: rgba(60, 69, 97, 0.82);
+}
+
+.history-drawer-body {
+  margin-top: 8rpx;
+  border-top: 1rpx solid rgba(255, 194, 154, 0.18);
+  padding-top: 8rpx;
+}
+
 .history-tone-0 {
   background: linear-gradient(135deg, rgba(255, 208, 153, 0.5), rgba(255, 185, 171, 0.48));
   border-color: rgba(255, 228, 196, 0.5);

@@ -172,7 +172,11 @@ function finalizeChallenge(challenge, status, reason) {
     settleCompletedChallengeStats(doneChallenge);
   }
   challengeRepo.appendChallengeHistory(doneChallenge);
-  cloudSyncEngine.upsertChallenge(doneChallenge);
+  if (status === CHALLENGE_STATUS.CANCELED) {
+    cloudSyncEngine.deleteChallenge(doneChallenge.id);
+  } else {
+    cloudSyncEngine.upsertChallenge(doneChallenge);
+  }
   challengeRepo.clearActiveChallenge();
   return doneChallenge;
 }
@@ -215,7 +219,10 @@ function getChallengeHistory() {
 
 function getCurrentUserChallengeHistory() {
   const currentUserId = userEngine.getCurrentUserId();
-  return getChallengeHistory().filter((challenge) => challenge.participants.some((p) => p.userId === currentUserId));
+  return getChallengeHistory()
+    .filter((challenge) => challenge.status === CHALLENGE_STATUS.COMPLETED)
+    .filter((challenge) => challenge.participants.some((p) => p.userId === currentUserId))
+    .slice(0, 5);
 }
 
 function normalizeParticipants(rawParticipants, creatorId) {
