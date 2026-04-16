@@ -270,6 +270,44 @@ draft -> recruiting -> active -> settled -> archived
 
 以下字段为建议最小集合（可按选型映射为 SQL 或云数据库文档结构）。
 
+### 5.0 云开发集合配置
+
+当前项目使用微信云开发，集合命名规范：`sleep_rank_*`
+
+**已创建的集合：**
+- `sleep_rank_users` - 用户资料
+- `sleep_rank_challenges` - 挑战数据
+- `sleep_rank_user_stats` - 用户统计数据
+- `sleep_rank_point_accounts` - 积分账户
+- `sleep_rank_point_logs` - 积分流水
+- `sleep_rank_sleep_sessions` - 睡眠会话历史（待创建）
+- `sleep_rank_daily_results` - 每日判定结果（待创建）
+
+**索引配置建议：**
+```javascript
+// sleep_rank_challenges
+{
+  participantUserIds: 1,  // 数组索引
+  status: 1,
+  updatedAt: -1
+}
+
+// sleep_rank_daily_results (待创建)
+{
+  userId: 1,
+  dateKey: 1,
+  challengeId: 1
+}
+
+// sleep_rank_sleep_sessions (待创建)
+{
+  userId: 1,
+  sleepStartTime: -1
+}
+```
+
+---
+
 ## 5.1 User
 - `id` (PK)
 - `openid` (unique)
@@ -340,7 +378,39 @@ draft -> recruiting -> active -> settled -> archived
 - `ref_id`
 - `created_at`
 
-## 5.7 Achievement（预留）
+## 5.7 SleepSession（睡眠会话历史）
+- `id` (PK)
+- `userId` (FK user.id)
+- `sleepStartTime`（入睡时间戳）
+- `sleepEndTime`（起床时间戳）
+- `durationMinutes`（总睡眠时长，分钟）
+- `wakeCount`（醒来次数）
+- `wakeEvents`（Array，每次醒来的详细记录）
+  - `wakeStartTime`
+  - `wakeEndTime`
+  - `durationMinutes`
+- `sleepScore`（睡眠质量分数）
+- `createdAt`
+
+> unique key: (`userId`, `sleepStartTime`)
+> 说明：本地存储最多保留 50 条，云端可长期保存
+
+## 5.8 DailyResult（每日判定结果）
+- `id` (PK)
+- `challengeId` (FK challenge.id)
+- `userId` (FK user.id)
+- `dateKey`（日期字符串，如 "2026-04-03"）
+- `status`（PASS/FAIL）
+- `failType`（FAIL_TIMEOUT/FAIL_MISS/FAIL_EARLY_ACTIVE/FAIL_INTERRUPT/FAIL_EARLY_WAKE/FAIL_LONG_WAKE）
+- `message`（判定说明）
+- `detail`（Object，详细判定数据）
+- `ruleConfig`（Object，使用的规则配置快照）
+- `createdAt`
+
+> unique key: (`challengeId`, `userId`, `dateKey`)
+> 说明：从 challenge.dailyResults 独立出来，便于查询和分析
+
+## 5.9 Achievement（预留）
 - `id` (PK)
 - `user_id` (FK)
 - `achievement_code`

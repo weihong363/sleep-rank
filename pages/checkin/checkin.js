@@ -236,5 +236,9 @@ Page({
           : item
       ))
     });
+  },
+
+  goBack() {
+    wx.navigateBack();
   }
 });

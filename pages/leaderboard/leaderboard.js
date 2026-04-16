@@ -20,5 +20,9 @@ Page({
         totalRankList
       });
     });
+  },
+
+  goBack() {
+    wx.navigateBack();
   }
 });

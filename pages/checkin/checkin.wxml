@@ -1,5 +1,8 @@
 <view class="screen">
   <view class="screen-glow"></view>
+  <view class="back-btn" bindtap="goBack">
+    <text class="back-icon">‹</text>
+  </view>
   <view class="content">
     <view class="page-title">我的记录</view>
 

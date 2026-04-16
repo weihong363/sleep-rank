@@ -106,5 +106,9 @@ Page({
     });
 
     wx.navigateBack();
+  },
+
+  goBack() {
+    wx.navigateBack();
   }
 });

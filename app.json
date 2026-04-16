@@ -5,8 +5,7 @@
     "pages/challenge-create/challenge-create",
     "pages/challenge-target-select/challenge-target-select",
     "pages/checkin/checkin",
-    "pages/leaderboard/leaderboard",
-    "pages/history/history"
+    "pages/leaderboard/leaderboard"
   ],
   "window": {
     "navigationBarTitleText": "Sleep Rank",

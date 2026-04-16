@@ -189,6 +189,10 @@ Page({
     });
   },
 
+  goBack() {
+    wx.navigateBack();
+  },
+
   getCurrentShareChallenge() {
     if (this.data.activeSummary && this.data.activeSummary.id) {
       return this.data.activeSummary;

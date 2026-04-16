@@ -49,7 +49,6 @@
 
   <view class="entry-bar">
     <view class="entry-chip" bindtap="goCreateChallenge">挑战中心</view>
-    <view class="entry-chip" bindtap="goHistory">历史记录</view>
     <view class="entry-chip" bindtap="goCheckIn">我的记录</view>
     <view class="entry-chip" bindtap="goProfile">个人资料</view>
   </view>
