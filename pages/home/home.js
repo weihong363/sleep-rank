@@ -292,6 +292,12 @@ Page({
     });
   },
 
+  goHistory() {
+    wx.navigateTo({
+      url: '/pages/history/history'
+    });
+  },
+
   goProfile() {
     wx.navigateTo({
       url: '/pages/profile/profile'

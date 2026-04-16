@@ -37,7 +37,8 @@ Page({
   onShow() {
     if (typeof wx !== 'undefined' && wx.showShareMenu) {
       wx.showShareMenu({
-        menus: ['shareAppMessage', 'shareTimeline']
+        menus: ['shareAppMessage'],
+        withShareTicket: true
       });
     }
     challengeEngine.refreshFromCloudForCurrentUser().finally(() => {
@@ -217,20 +218,5 @@ Page({
       };
     }
     return payload;
-  },
-
-  onShareTimeline() {
-    const payload = this.getSharePayload();
-    if (!payload) {
-      return {
-        title: 'SleepRank 睡眠挑战',
-        query: ''
-      };
-    }
-    const query = payload.path.split('?')[1] || '';
-    return {
-      title: payload.title,
-      query
-    };
   }
 });

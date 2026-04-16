@@ -20,6 +20,28 @@ function getLatestSleepRecord() {
   return storage.get(`${keys.LATEST_SLEEP_RECORD}_${userId}`, null);
 }
 
+function getSleepSessionHistory(userId = userEngine.getCurrentUserId()) {
+  return storage.get(`${keys.SLEEP_SESSION_HISTORY}_${userId}`, []);
+}
+
+function saveSleepSessionHistory(history, userId = userEngine.getCurrentUserId()) {
+  storage.set(`${keys.SLEEP_SESSION_HISTORY}_${userId}`, history);
+  return history;
+}
+
+function appendSleepSession(record) {
+  if (!record || !record.sleepStartTime) {
+    return getSleepSessionHistory();
+  }
+  const userId = record.userId || userEngine.getCurrentUserId();
+  const history = getSleepSessionHistory(userId);
+  if (history.some((item) => item.sleepStartTime === record.sleepStartTime)) {
+    return history;
+  }
+  const next = [record, ...history].slice(0, 50);
+  return saveSleepSessionHistory(next, userId);
+}
+
 function startSleep() {
   const now = Date.now();
   const userId = userEngine.getCurrentUserId();
@@ -115,6 +137,7 @@ function endSleep() {
   );
 
   const record = {
+    userId: session.userId,
     sleepStartTime: session.sleepStartTime,
     sleepEndTime,
     durationMinutes,
@@ -125,6 +148,7 @@ function endSleep() {
   };
 
   storage.set(`${keys.LATEST_SLEEP_RECORD}_${session.userId}`, record);
+  appendSleepSession(record, session.userId);
   storage.remove(`${keys.ACTIVE_SLEEP_SESSION}_${session.userId}`);
   return record;
 }
@@ -132,6 +156,7 @@ function endSleep() {
 module.exports = {
   getActiveSession,
   getLatestSleepRecord,
+  getSleepSessionHistory,
   startSleep,
   endSleep,
   onAppShow,

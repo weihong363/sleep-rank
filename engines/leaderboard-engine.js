@@ -90,15 +90,25 @@ function buildChallengeLeaderboard(activeChallenge) {
  * 用户总榜：用累计 UserStats + 当前挑战实时分。
  */
 function buildUserTotalLeaderboard(activeChallenge) {
+  // Get users from challenge participants and user directory
+  const participantUserIds = new Set();
+  if (activeChallenge && activeChallenge.participants) {
+    activeChallenge.participants.forEach((p) => participantUserIds.add(p.userId));
+  }
+  
   const users = userEngine.getUsers();
+  const allUserIds = new Set(users.map((u) => u.id));
+  participantUserIds.forEach((id) => allUserIds.add(id));
+  
   const currentUserId = userEngine.getCurrentUserId();
-  const rows = users.map((user) => {
-    const userStats = challengeEngine.getUserStats(user.id);
-    const challengeStat = getChallengeUserStat(activeChallenge, user.id);
+  const rows = Array.from(allUserIds).map((userId) => {
+    const user = userEngine.getUserById(userId) || { id: userId, name: `用户${String(userId).slice(-6)}` };
+    const userStats = challengeEngine.getUserStats(userId);
+    const challengeStat = getChallengeUserStat(activeChallenge, userId);
     const judgedChallenges = userStats.completedChallenges + userStats.missedChallenges;
     return {
-      userId: user.id,
-      nickname: user.id === currentUserId ? `${user.name}(我)` : user.name,
+      userId,
+      nickname: userId === currentUserId ? `${user.name}(我)` : user.name,
       totalScore: userStats.totalScore + challengeStat.totalScore,
       checkedDays: challengeStat.checkedDays,
       successRate: calculateSuccessRate(userStats.completedChallenges, judgedChallenges),

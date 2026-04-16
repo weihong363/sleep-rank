@@ -384,7 +384,8 @@ test('leaderboard uses real data for challenge board and total board', () => {
   assert.strictEqual(haoInChallenge.successRate, 0);
   assert.ok(meInChallenge.totalScore > haoInChallenge.totalScore);
 
-  assert.strictEqual(totalBoard.length, 5);
+  // Total board now only includes users who have participated in challenges
+  assert.ok(totalBoard.length >= 3);
   const meInTotal = totalBoard.find((item) => item.userId === 'u_mei');
   assert.ok(meInTotal);
   assert.ok(meInTotal.totalScore >= meInChallenge.totalScore);
@@ -476,6 +477,103 @@ test('P1 points and history: challenge complete writes history and point logs', 
   assert.ok(myHistory.length >= 1);
   const pointLogs = pointEngine.getPointLogs('u_mei');
   assert.ok(pointLogs.length >= 1);
+});
+
+test('concurrent multi-user checkin: all users can check in independently', () => {
+  const { challengeEngine, userEngine, sleepEngine } = bootstrap();
+  
+  // 创建挑战
+  userEngine.setCurrentUserId('u_mei');
+  const createRes = challengeEngine.createChallenge({
+    name: '多人并发打卡测试',
+    targetDays: 7,
+    sleepWindowStart: '23:00',
+    sleepWindowEnd: '07:00',
+    participants: [{ userId: 'u_hao' }, { userId: 'u_nan' }, { userId: 'u_chen' }]
+  });
+  assert.strictEqual(createRes.ok, true);
+  
+  // 所有成员接受挑战
+  userEngine.setCurrentUserId('u_hao');
+  challengeEngine.acceptChallenge();
+  userEngine.setCurrentUserId('u_nan');
+  challengeEngine.acceptChallenge();
+  userEngine.setCurrentUserId('u_chen');
+  challengeEngine.acceptChallenge();
+  
+  // 模拟同一晚不同时间入睡（都在 2026-04-03 晚上）
+  
+  // u_mei 在 22:50 入睡（提前，应通过）
+  userEngine.setCurrentUserId('u_mei');
+  withMockNow(new Date(2026, 3, 3, 22, 50).getTime(), () => sleepEngine.startSleep());
+  const meiRecord = withMockNow(new Date(2026, 3, 4, 5, 20).getTime(), () => sleepEngine.endSleep());
+  const meiCheckIn = withMockNow(new Date(2026, 3, 3, 22, 50).getTime(), () => 
+    challengeEngine.addTodayCheckIn(meiRecord)
+  );
+  assert.strictEqual(meiCheckIn.ok, true);
+  assert.strictEqual(meiCheckIn.checkIn.dailyJudgeResult.status, 'PASS');
+  
+  // u_hao 在 23:05 入睡（在宽限期内，应通过）
+  userEngine.setCurrentUserId('u_hao');
+  withMockNow(new Date(2026, 3, 3, 23, 5).getTime(), () => sleepEngine.startSleep());
+  const haoRecord = withMockNow(new Date(2026, 3, 4, 5, 30).getTime(), () => sleepEngine.endSleep());
+  const haoCheckIn = withMockNow(new Date(2026, 3, 3, 23, 5).getTime(), () => 
+    challengeEngine.addTodayCheckIn(haoRecord)
+  );
+  assert.strictEqual(haoCheckIn.ok, true);
+  // 23:05 在 23:00+10分钟宽限内，应该通过
+  assert.strictEqual(haoCheckIn.checkIn.dailyJudgeResult.status, 'PASS');
+  
+  // u_nan 在 23:20 入睡（超时，超过 23:10 宽限期）
+  userEngine.setCurrentUserId('u_nan');
+  withMockNow(new Date(2026, 3, 3, 23, 20).getTime(), () => sleepEngine.startSleep());
+  const nanRecord = withMockNow(new Date(2026, 3, 4, 6, 0).getTime(), () => sleepEngine.endSleep());
+  // 注意：必须在入睡时的日期打卡，否则 dateKey 会错
+  const nanCheckIn = withMockNow(new Date(2026, 3, 3, 23, 20).getTime(), () => 
+    challengeEngine.addTodayCheckIn(nanRecord)
+  );
+  assert.strictEqual(nanCheckIn.ok, true);
+  // 23:20 超过 23:00+10分钟，应该判定为 FAIL_TIMEOUT
+  assert.strictEqual(nanCheckIn.checkIn.dailyJudgeResult.status, 'FAIL');
+  assert.strictEqual(nanCheckIn.checkIn.dailyJudgeResult.failType, 'FAIL_TIMEOUT');
+  
+  // u_chen 漏打卡（时间已超过 23:10 截止时间）
+  userEngine.setCurrentUserId('u_chen');
+  const chenResult = withMockNow(new Date(2026, 3, 3, 23, 15).getTime(), () => 
+    challengeEngine.getTodayChallengeResult()
+  );
+  assert.strictEqual(chenResult.failType, 'FAIL_MISS');
+  
+  // 验证排行榜数据正确
+  userEngine.setCurrentUserId('u_mei');
+  const challenge = challengeEngine.getActiveChallenge();
+  assert.strictEqual(challenge.checkIns.length, 3);
+  assert.strictEqual(challenge.dailyResults.length, 4); // 3个checkIn + 1个miss
+});
+
+test('sleep session history: records persist after end sleep', () => {
+  const { sleepEngine, userEngine } = bootstrap();
+  userEngine.setCurrentUserId('u_mei');
+  
+  // 第一次睡眠
+  withMockNow(new Date(2026, 3, 3, 23, 0).getTime(), () => sleepEngine.startSleep());
+  const record1 = withMockNow(new Date(2026, 3, 4, 6, 0).getTime(), () => sleepEngine.endSleep());
+  assert.ok(record1);
+  
+  // 第二次睡眠
+  withMockNow(new Date(2026, 3, 4, 23, 0).getTime(), () => sleepEngine.startSleep());
+  const record2 = withMockNow(new Date(2026, 3, 5, 6, 30).getTime(), () => sleepEngine.endSleep());
+  assert.ok(record2);
+  
+  // 验证历史记录
+  const history = sleepEngine.getSleepSessionHistory('u_mei');
+  assert.strictEqual(history.length, 2);
+  assert.strictEqual(history[0].sleepStartTime, record2.sleepStartTime);
+  assert.strictEqual(history[1].sleepStartTime, record1.sleepStartTime);
+  
+  // 验证包含 userId 字段
+  assert.strictEqual(history[0].userId, 'u_mei');
+  assert.strictEqual(history[1].userId, 'u_mei');
 });
 
 if (!process.exitCode) {

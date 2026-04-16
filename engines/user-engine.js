@@ -2,18 +2,7 @@ const storage = require('../store/storage');
 const keys = require('../store/keys');
 const cloudSyncEngine = require('./cloud-sync-engine');
 
-const MOCK_USERS = [
-  { id: 'u_mei', name: '小美' },
-  { id: 'u_hao', name: '小浩' },
-  { id: 'u_nan', name: '小楠' },
-  { id: 'u_chen', name: '小晨' },
-  { id: 'u_leo', name: 'Leo' }
-];
-
-const MOCK_GROUPS = [
-  { id: 'g_early', name: '早睡俱乐部', memberIds: ['u_mei', 'u_hao', 'u_nan'] },
-  { id: 'g_team', name: '晚安挑战群', memberIds: ['u_mei', 'u_chen', 'u_leo'] }
-];
+// Mock users removed - now using cloud-based user system only
 
 function getCurrentUserId() {
   return storage.get(keys.CURRENT_USER_ID, null);
@@ -56,27 +45,13 @@ function isCloudUserId(userId) {
 function getUsers() {
   const directory = getUserDirectory();
   const values = Object.keys(directory).map((id) => directory[id]);
-  if (values.length === 0) {
-    return MOCK_USERS;
-  }
-  const map = {};
-  values.forEach((item) => {
-    map[item.id] = item;
-  });
-  MOCK_USERS.forEach((item) => {
-    if (!map[item.id]) {
-      map[item.id] = item;
-    }
-  });
-  return Object.keys(map).map((id) => map[id]);
+  // Return empty array if no users, forcing cloud sync
+  return values;
 }
 
 function getGroups() {
-  const currentUserId = getCurrentUserId();
-  if (isCloudUserId(currentUserId)) {
-    return [];
-  }
-  return MOCK_GROUPS;
+  // Groups feature not implemented yet, return empty array
+  return [];
 }
 
 function getUserById(userId) {
@@ -87,15 +62,16 @@ function getUserById(userId) {
   if (directory[userId]) {
     return directory[userId];
   }
-  return MOCK_USERS.find((u) => u.id === userId) || null;
+  // No mock fallback - user must be synced from cloud
+  return null;
 }
 
 function getCurrentUser() {
   const currentUserId = getCurrentUserId();
   if (!currentUserId) {
-    return MOCK_USERS[0];
+    return { id: '', name: '未登录', avatarUrl: '' };
   }
-  return getUserById(currentUserId) || { id: currentUserId, name: `用户${String(currentUserId).slice(-6)}` };
+  return getUserById(currentUserId) || { id: currentUserId, name: `用户${String(currentUserId).slice(-6)}`, avatarUrl: '' };
 }
 
 function ensureCurrentUser() {
@@ -105,13 +81,11 @@ function ensureCurrentUser() {
     if (found) {
       return found;
     }
-    const fallback = { id: currentUserId, name: `用户${String(currentUserId).slice(-6)}` };
+    const fallback = { id: currentUserId, name: `用户${String(currentUserId).slice(-6)}`, avatarUrl: '' };
     return upsertUser(fallback) || fallback;
   }
-  const fallback = MOCK_USERS[0];
-  setCurrentUserId(fallback.id);
-  upsertUser(fallback);
-  return fallback;
+  // No default mock user - must login first
+  return { id: '', name: '未登录', avatarUrl: '' };
 }
 
 function upsertCurrentUserProfile(profile = {}) {
