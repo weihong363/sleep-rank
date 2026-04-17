@@ -2,7 +2,7 @@
   position: relative;
   width: 100vw;
   min-height: 100vh;
-  padding: 88rpx 30rpx 40rpx;
+  padding: 148rpx 30rpx 40rpx;
   box-sizing: border-box;
   background:
     radial-gradient(circle at 62% 49%, rgba(255, 159, 96, 0.22), rgba(255, 159, 96, 0) 18%),
@@ -24,7 +24,7 @@
 
 .back-btn {
   position: absolute;
-  top: 20rpx;
+  top: 90rpx;
   left: 30rpx;
   width: 64rpx;
   height: 64rpx;

@@ -6,7 +6,7 @@ page {
   position: relative;
   width: 100vw;
   min-height: 100vh;
-  padding: 88rpx 30rpx calc(40rpx + env(safe-area-inset-bottom));
+  padding: 148rpx 30rpx calc(40rpx + env(safe-area-inset-bottom));
   box-sizing: border-box;
   background:
     radial-gradient(circle at 62% 49%, rgba(255, 159, 96, 0.22), rgba(255, 159, 96, 0) 18%),
@@ -28,7 +28,7 @@ page {
 
 .back-btn {
   position: absolute;
-  top: 20rpx;
+  top: 90rpx;
   left: 30rpx;
   width: 64rpx;
   height: 64rpx;

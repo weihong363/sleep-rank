@@ -49,18 +49,16 @@ page {
 
 .page-title {
   text-align: center;
-  margin-bottom: 22rpx;
-  font-size: 48rpx;
+  margin-bottom: 20rpx;
+  font-size: 44rpx;
   line-height: 1;
   letter-spacing: -1rpx;
   color: rgba(255, 236, 224, 0.92);
-  text-transform: lowercase;
 }
 
 .card {
   border-radius: 26rpx;
-  padding: 28rpx;
-  margin-bottom: 20rpx;
+  padding: 26rpx;
   background: linear-gradient(180deg, rgba(61, 58, 92, 0.72), rgba(44, 45, 77, 0.88));
   border: 1rpx solid rgba(255, 194, 154, 0.28);
   box-shadow:
@@ -68,58 +66,83 @@ page {
     inset 0 1rpx 1rpx rgba(255, 255, 255, 0.06);
 }
 
-.secondary-card {
-  margin-bottom: 0;
-}
-
 .title {
-  font-size: 32rpx;
+  font-size: 34rpx;
   color: #ffe9d8;
   font-weight: 600;
-  margin-bottom: 16rpx;
 }
 
-.rank-row {
+.profile-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 20rpx;
+  padding: 0 14rpx;
+  box-sizing: border-box;
+}
+
+.profile-info {
+  flex: 1;
+}
+
+.nick-name {
+  font-size: 36rpx;
+  color: rgba(255, 236, 224, 0.96);
+  font-weight: 600;
+}
+
+.line {
+  margin-top: 12rpx;
+  font-size: 26rpx;
+  color: rgba(255, 233, 217, 0.92);
+}
+
+.field {
+  margin-top: 20rpx;
+}
+
+.field-label {
+  font-size: 26rpx;
+  color: rgba(255, 224, 202, 0.88);
+  margin-bottom: 10rpx;
+}
+
+.avatar-btn {
+  width: 128rpx;
+  min-width: 128rpx;
+  max-width: 128rpx;
+  height: 128rpx;
+  min-height: 128rpx;
+  max-height: 128rpx;
+  border-radius: 20rpx;
+  padding: 0;
+  background: transparent;
+  border: 1rpx solid rgba(255, 191, 150, 0.3);
   display: flex;
   align-items: center;
-  padding: 18rpx 0;
-  border-bottom: 1rpx solid rgba(255, 191, 150, 0.18);
+  justify-content: center;
+  overflow: hidden;
+  line-height: 0;
 }
 
-.rank-row:last-child {
-  border-bottom: none;
+.avatar-btn::after {
+  border: none;
 }
 
-.rank-no {
-  width: 100rpx;
-  color: #ffe2ca;
-  font-weight: 600;
-}
-
-.rank-name {
+.avatar {
+  width: 128rpx;
+  height: 128rpx;
+  border-radius: 20rpx;
+  background: rgba(255, 255, 255, 0.2);
   display: block;
-  flex: 1;
-  color: rgba(255, 237, 225, 0.9);
 }
 
-.rank-main {
-  flex: 1;
-}
-
-.rank-meta {
-  display: block;
-  margin-top: 4rpx;
-  color: rgba(255, 228, 202, 0.7);
-  font-size: 22rpx;
-}
-
-.rank-score {
-  color: #ffcc9e;
-  font-weight: 600;
-}
-
-.empty {
-  color: rgba(255, 227, 202, 0.72);
-  font-size: 24rpx;
-  padding-top: 4rpx;
+.save-btn {
+  margin-top: 20rpx;
+  color: #0e0b12;
+  border: none;
+  border-radius: 9999rpx;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0) 55%),
+    linear-gradient(180deg, rgba(173, 135, 132, 0.95), rgba(142, 108, 109, 0.98));
 }

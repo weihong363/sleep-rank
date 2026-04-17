@@ -1,0 +1,26 @@
+<view class="screen">
+  <view class="screen-glow"></view>
+  <view class="back-btn" bindtap="goBack">
+    <text class="back-icon">‹</text>
+  </view>
+  <view class="content">
+    <view class="page-title">个人资料</view>
+
+    <view class="card">
+      <view class="profile-header">
+        <view class="profile-info">
+          <view class="nick-name">{{nickName || '微信用户'}}</view>
+          <view class="line">资料状态：{{profileCompleted ? '已完善' : '待完善'}}</view>
+          <view class="field-label">点击右侧头像可更换</view>
+        </view>
+        <button class="avatar-btn" open-type="chooseAvatar" bindchooseavatar="onChooseAvatar">
+          <view class="avatar-frame">
+            <image class="avatar" src="{{avatarUrl || '/images/default-avatar.svg'}}" mode="aspectFit"></image>
+          </view>
+        </button>
+      </view>
+    </view>
+
+    <button class="save-btn" bindtap="onSave">保存资料</button>
+  </view>
+</view>
